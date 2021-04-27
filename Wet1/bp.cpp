@@ -11,6 +11,21 @@ enum SHARE_TYPE{GLOBAL, LOCAL, NONE};
 const int MAX_BTB_SIZE = 32;
 const int MAX_STATE_MACHINES = 256; // 2^8 (8 = max size of history)
 const int COLUMNS_BTB = 3; // for [0] = valid bit ,[1] = tag and [2] = history
+enum FSM_STATE{SNT = 0, WNT = 1, WT = 2, ST = 3};
+
+class FSM {
+private:
+    FSM_STATE current_state;
+public:
+    FSM(int initial_state):
+        current_state(FSM_STATE(initial_state))
+    {}
+    FSM_STATE getState(){
+        return current_state;
+    }
+    FSM_STATE &operator++();
+    FSM_STATE &operator--();
+};
 
 class BP {
 private:
@@ -45,7 +60,44 @@ public:
     BP(BP& other) = default; // copy c'tor
 };
 
+
 BP* branch_predictor_pointer;
+
+FSM_STATE& FSM::operator++(){
+    if (current_state == ST){
+        return current_state;
+    }
+    else if (current_state == SNT) {
+        current_state == WNT;
+        return current_state;
+    }
+    else if (current_state == WNT){
+        current_state == WT;
+        return current_state;
+    }
+    else{       //if (current_state == WT)
+        current_state = ST;
+        return current_state;
+    }
+}
+
+FSM_STATE& FSM::operator--(){
+    if (current_state == SNT){
+        return current_state;
+    }
+    else if (current_state == WNT) {
+        current_state == SNT;
+        return current_state;
+    }
+    else if (current_state == WT){
+        current_state == WNT;
+        return current_state;
+    }
+    else{       //if (current_state == ST)
+        current_state = WT;
+        return current_state;
+    }
+}
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
