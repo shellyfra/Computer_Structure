@@ -114,7 +114,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
     if (bp_pointer->state_machine_type == LOCAL) { // state machines are LOCAL
         bp_pointer->local_state_machine_array.resize(bp_pointer->BTB_size, std::vector<FSM>(num_state_machines, FSM(bp_pointer->start_state)));
     }
-    else { // state machinse are GLOBAL
+    else { // state machines are GLOBAL
         bp_pointer->global_state_machine_array.resize(num_state_machines,FSM(bp_pointer->start_state));
     }
 
@@ -150,7 +150,7 @@ void BP_GetStats(SIM_stats *curStats){
     int entries = bp_pointer->BTB_size;
     int valid_bit = 1;
     int tag_size = bp_pointer->tag_size;
-    int target_size = 32; //TODO: consider removing the excess 2 bits.
+    int target_size = sizeof(uint32_t); //TODO: consider removing the excess 2 bits.
     int history_size = bp_pointer->history_reg_size;
 
     /**
