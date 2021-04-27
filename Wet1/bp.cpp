@@ -228,8 +228,9 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
 
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
-        // TODO : if btb_size =1
+        // TODO : if btb_size = 1 || history reg == 1
         //TODO: call update ? how do we check if we predicted right ???
+        //TODO : check if tag = 0 ?
     }
     else if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == GLOBAL){
         return check_lh_gfsm(pc, dst);
