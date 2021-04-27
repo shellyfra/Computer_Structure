@@ -8,6 +8,22 @@
 
 enum BIMODAL{USING_SHARE_LSB = 1, USING_SHARE_MID = 2, NOT_USING_SHARE=0 };
 enum SHARE_TYPE{GLOBAL, LOCAL, NONE};
+enum FSM_STATE{SNT = 0, WNT = 1, WT = 2, ST = 3};
+
+class FSM {
+private:
+    FSM_STATE current_state;
+public:
+    FSM(int initial_state):
+        current_state(FSM_STATE(initial_state))
+    {}
+    FSM_STATE getState(){
+        return current_state;
+    }
+    FSM_STATE &operator++();
+    FSM_STATE &operator--();
+};
+
 class BP {
 private:
     unsigned int BTB_size;
@@ -38,6 +54,41 @@ public:
     }
 };
 
+FSM_STATE& FSM::operator++(){
+    if (current_state == ST){
+        return current_state;
+    }
+    else if (current_state == SNT) {
+        current_state == WNT;
+        return current_state;
+    }
+    else if (current_state == WNT){
+        current_state == WT;
+        return current_state;
+    }
+    else{       //if (current_state == WT)
+        current_state = ST;
+        return current_state;
+    }
+}
+
+FSM_STATE& FSM::operator--(){
+    if (current_state == SNT){
+        return current_state;
+    }
+    else if (current_state == WNT) {
+        current_state == SNT;
+        return current_state;
+    }
+    else if (current_state == WT){
+        current_state == WNT;
+        return current_state;
+    }
+    else{       //if (current_state == ST)
+        current_state = WT;
+        return current_state;
+    }
+}
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
