@@ -36,7 +36,7 @@ private:
     SHARE_TYPE history_type;
     SHARE_TYPE state_machine_type;
     SHARE_TYPE predictor_type;
-    int history_cache[MAX_BTB_SIZE][COLUMNS_BTB] = {{0}}; //first col = tag, second col = history register
+    int history_cache[MAX_BTB_SIZE][COLUMNS_BTB] = {{0}}; // for [0] = valid bit ,[1] = tag and [2] = history
     unsigned int local_state_machine_array[MAX_BTB_SIZE][MAX_STATE_MACHINES] = {{0}};
     unsigned int global_state_machine_array[MAX_STATE_MACHINES] = {0};
     unsigned int global_history = 0;
