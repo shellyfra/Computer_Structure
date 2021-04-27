@@ -70,11 +70,11 @@ FSM_STATE& FSM::operator++(){
         return current_state;
     }
     else if (current_state == SNT) {
-        current_state == WNT;
+        current_state = WNT;
         return current_state;
     }
     else if (current_state == WNT){
-        current_state == WT;
+        current_state = WT;
         return current_state;
     }
     else{       //if (current_state == WT)
@@ -88,11 +88,11 @@ FSM_STATE& FSM::operator--(){
         return current_state;
     }
     else if (current_state == WNT) {
-        current_state == SNT;
+        current_state = SNT;
         return current_state;
     }
     else if (current_state == WT){
-        current_state == WNT;
+        current_state = WNT;
         return current_state;
     }
     else{       //if (current_state == ST)
