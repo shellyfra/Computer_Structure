@@ -102,7 +102,7 @@ FSM_STATE& FSM::operator--(){
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
     BP* branch_predictor = new BP(btbSize, historySize, tagSize, fsmState, isGlobalHist, isGlobalTable, Shared);
-    branch_predictor_pointer = branch_predictor;
+    bp_pointer = branch_predictor;
 
 
     return -1;
