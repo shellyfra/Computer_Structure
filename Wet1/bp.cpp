@@ -8,6 +8,10 @@
 
 enum BIMODAL{USING_SHARE_LSB = 1, USING_SHARE_MID = 2, NOT_USING_SHARE=0 };
 enum SHARE_TYPE{GLOBAL, LOCAL, NONE};
+const int MAX_BTB_SIZE = 32;
+const int MAX_STATE_MACHINES = 256; // 2^8 (8 = max size of history)
+const int COLUMNS_BTB = 3; // for [0] = valid bit ,[1] = tag and [2] = history
+
 class BP {
 private:
     unsigned int BTB_size;
@@ -17,15 +21,14 @@ private:
     SHARE_TYPE history_type;
     SHARE_TYPE state_machine_type;
     SHARE_TYPE predictor_type;
+    int history_cache[MAX_BTB_SIZE][COLUMNS_BTB] = {{0}}; //first col = tag, second col = history register
+    unsigned int local_state_machine_array[MAX_BTB_SIZE][MAX_STATE_MACHINES] = {{0}};
+    unsigned int global_state_machine_array[MAX_STATE_MACHINES] = {0};
+    unsigned int global_history = 0;
+    int branch_counter = 0;
+    int wrong_prediction_counter = 0;
 
 public:
-    std::map<unsigned int, unsigned int> history_cache;
-    map<unsigned int, std::vector<unsigned int>> local_state_machine_array;
-    std::vector<unsigned int> global_state_machine_array;
-    unsigned int global_history;
-    int branch_counter;
-    int wrong_prediction_counter;
-
 
     BP(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
        bool isGlobalHist, bool isGlobalTable, int Shared) :
@@ -35,13 +38,22 @@ public:
         if (Shared == 0){
             predictor_type = NONE;
         } else predictor_type = ((Shared == 1) ? GLOBAL : LOCAL);
-    }
+
+
+    } //c'tor
+    ~BP() = default; // d'tor
+    BP(BP& other) = default; // copy c'tor
 };
 
+BP* branch_predictor_pointer;
 
 int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
 			bool isGlobalHist, bool isGlobalTable, int Shared){
-	return -1;
+    BP* branch_predictor = new BP(btbSize, historySize, tagSize, fsmState, isGlobalHist, isGlobalTable, Shared);
+    branch_predictor_pointer = branch_predictor;
+
+
+    return -1;
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst){
