@@ -180,10 +180,10 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
         bp_pointer->global_state_machine_array.resize(num_state_machines,FSM(bp_pointer->start_state));
     }
 
-    if (bp_pointer->history_type == LOCAL) { //private history
-        bp_pointer->history_cache.resize(bp_pointer->BTB_size, std::vector<uint32_t>(COLUMNS_BTB, 0));
-    }
-    // else shared history - dont need to do anything - we have global_history
+    //if (bp_pointer->history_type == LOCAL) { //private history
+    bp_pointer->history_cache.resize(bp_pointer->BTB_size, std::vector<uint32_t>(COLUMNS_BTB, 0));
+    //}
+    // else shared history - need also to init BTB
     return 0;
 }
 
