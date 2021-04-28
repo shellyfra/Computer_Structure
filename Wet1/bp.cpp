@@ -157,7 +157,7 @@ FSM_STATE& FSM::operator--(){
 }
 uint32_t create_align(uint32_t size){
     uint32_t align = 0;
-    for (int i = 0 ; i < log2(size); i ++){
+    for (int i = 0 ; i < size; i ++){
         align |= (1 << i);
     }
     return align;
@@ -188,7 +188,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
 }
 
 bool check_lh_lfsm(uint32_t pc, uint32_t *dst){
-    uint32_t btb_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t btb_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align =  create_align(bp_pointer->tag_size);
     uint32_t history_cache_row = (pc >> 2) & btb_row_align;
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
@@ -207,7 +207,7 @@ bool check_lh_lfsm(uint32_t pc, uint32_t *dst){
 }
 
 bool check_lh_gfsm(uint32_t pc, uint32_t *dst){
-    uint32_t btb_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t btb_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
     uint32_t history_cache_row = (pc >> 2) & btb_row_align;
@@ -242,7 +242,7 @@ bool check_gh_gfsm(uint32_t pc, uint32_t *dst) {
     // #############################################################################
     // TODO : ASK Lina !! how do we search in the BT ? do we need to check if the branch exists in the table ?
     // #############################################################################
-    uint32_t btb_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t btb_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
     uint32_t history_cache_row = (pc >> 2) & btb_row_align;
@@ -261,7 +261,7 @@ bool check_gh_gfsm(uint32_t pc, uint32_t *dst) {
 }
 
 bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
-    uint32_t fsm_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t fsm_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
     uint32_t fsm_row = (pc >> 2) & fsm_row_align;
@@ -304,7 +304,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
 // #################################################################################################
 
 void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
-    uint32_t btb_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t btb_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align =  create_align(bp_pointer->tag_size);
     uint32_t history_cache_row = (pc >> 2) & btb_row_align;
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
@@ -337,7 +337,7 @@ void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
 
 void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
-    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
     uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
@@ -367,7 +367,7 @@ void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
 
 void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
-    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
     uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
@@ -397,7 +397,7 @@ void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
 
 void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
-    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
     uint32_t history_cache_row = (pc >> 2) & row_align;
     uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
