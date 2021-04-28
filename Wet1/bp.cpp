@@ -25,6 +25,20 @@ public:
     bool getState(){
         return (current_state >= 2);
     }
+    int get_state_int(){
+        if (current_state == ST){
+            return 3;
+        }
+        else if (current_state == SNT) {
+            return 0;
+        }
+        else if (current_state == WNT){
+            return 1;
+        }
+        else{       //if (current_state == WT)
+            return 2;
+        }
+    }
     FSM_STATE &operator++();
     FSM_STATE &operator--();
 };
@@ -64,6 +78,47 @@ public:
 };
 
 BP* bp_pointer;
+
+void print(){
+    std::cout << std::endl;
+    std::cout << "History: " << std::endl;
+    //std::cout << "___________________" << std::endl;
+    std::cout << "| ";
+    if (bp_pointer->history_type == GLOBAL){
+        std::cout << bp_pointer->global_history << std::endl;
+    } else {
+        for (int i = 0; i < bp_pointer->history_cache.size(); ++i) {
+            for (int j = 0; j < bp_pointer->history_cache.at(0).size(); ++j) {
+                std::cout << bp_pointer->history_cache.at(i).at(j) << " | ";
+            }
+            if (i+1 < bp_pointer->history_cache.size()) {
+                std::cout << std::endl << "| ";
+            }
+        }
+    }
+
+    std::cout << std::endl;
+    std::cout << "FSM: " << std::endl;
+    //std::cout << "_____________" << std::endl;
+    std::cout << "| ";
+    if (bp_pointer->state_machine_type == GLOBAL){
+        for (int i = 0; i < bp_pointer->global_state_machine_array.size(); ++i) {
+            std::cout << bp_pointer->global_state_machine_array.at(i).get_state_int() << " | ";
+        }
+        std::cout << std::endl;
+    } else {
+        for (int i = 0; i < bp_pointer->local_state_machine_array.size(); ++i) {
+            for (int j = 0; j < bp_pointer->history_reg_size; ++j) {
+                std::cout << bp_pointer->local_state_machine_array.at(i).at(j).get_state_int() << " | ";
+            }
+            if (i+1 < bp_pointer->history_cache.size()) {
+                std::cout << std::endl << "| ";
+            }
+        }
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
+}
 
 FSM_STATE& FSM::operator++(){
     if (current_state == ST){
@@ -225,7 +280,8 @@ bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst){
-
+    BP* temp = bp_pointer;
+    print();
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
         //TODO : if btb_size = 1 || history reg == 1
@@ -373,8 +429,9 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 }
 
 
-
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
+    BP* temp = bp_pointer;
+    print();
     uint32_t destination_we_predicted;
     bp_pointer->branch_counter++; // increase branch number by one
     bool what_we_predicted = BP_predict(pc, &destination_we_predicted);
