@@ -228,7 +228,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
 
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
-        // TODO : if btb_size = 1 || history reg == 1
+        //TODO : if btb_size = 1 || history reg == 1
         //TODO: call update ? how do we check if we predicted right ???
         //TODO : check if tag = 0 ?
     }
@@ -245,7 +245,159 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
 	return false;
 }
 
+// #################################################################################################
+
+void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
+    uint32_t btb_row_align = create_align(bp_pointer->BTB_size);
+    uint32_t tag_align =  create_align(bp_pointer->tag_size);
+    uint32_t history_cache_row = (pc >> 2) & btb_row_align;
+    uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
+    uint32_t table_tag = bp_pointer->history_cache[history_cache_row][1];
+
+    if (bp_pointer->history_cache[history_cache_row][0] && table_tag == pc_tag) { // branch exists
+        uint32_t sm_column = bp_pointer->history_cache[history_cache_row][2];
+        if (taken) {
+            bp_pointer->local_state_machine_array[history_cache_row][sm_column].operator++();
+        } else {
+            bp_pointer->local_state_machine_array[history_cache_row][sm_column].operator--();
+        }
+        sm_column = (sm_column << 1) | taken;
+        sm_column &= create_align(bp_pointer->history_reg_size);
+        bp_pointer->history_cache[history_cache_row][2] = sm_column;
+    }
+    else { //doesnt exist in table - update value to pc + 4
+        if (taken) { //the column equals zero since history is initialized to zero.
+            bp_pointer->local_state_machine_array[history_cache_row][0].operator++();
+        } else {
+            bp_pointer->local_state_machine_array[history_cache_row][0].operator--();
+        }
+        bp_pointer->history_cache[history_cache_row][2] = uint32_t(taken); // reset history according to 'taken' value.
+    }
+    // predicted NT or not found in table
+    bp_pointer->history_cache[history_cache_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[history_cache_row][1] = pc_tag;
+    bp_pointer->history_cache[history_cache_row][3] = targetPC;
+}
+
+
+void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
+    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t tag_align = create_align(bp_pointer->tag_size);
+
+    uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
+    uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
+    uint32_t table_tag = bp_pointer->history_cache[fsm_and_btb_row][1];
+
+    if (bp_pointer->history_cache[fsm_and_btb_row][0] && table_tag == pc_tag){ // if found in table
+        if(taken){ // if Taken
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][bp_pointer->global_history].operator++();
+        } else {
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][bp_pointer->global_history].operator--();
+        }
+    }
+    else { // predicted NT or not found in table
+        if (taken) { //the column equals zero since history is initialized to zero.
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][0].operator++();
+        } else {
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][0].operator--();
+        }
+    }
+    bp_pointer->global_history = (bp_pointer->global_history << 1) | taken;
+    bp_pointer->global_history &= create_align(bp_pointer->history_reg_size);
+    bp_pointer->history_cache[fsm_and_btb_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[fsm_and_btb_row][1] = pc_tag;
+    bp_pointer->history_cache[fsm_and_btb_row][3] = targetPC;
+}
+
+
+void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
+    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t tag_align = create_align(bp_pointer->tag_size);
+
+    uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
+    uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
+    uint32_t table_tag = bp_pointer->history_cache[fsm_and_btb_row][1];
+
+    if (bp_pointer->history_cache[fsm_and_btb_row][0] && table_tag == pc_tag){ // if found in table
+        if(taken){ // if Taken
+            bp_pointer->global_state_machine_array[bp_pointer->global_history].operator++();
+        } else {
+            bp_pointer->global_state_machine_array[bp_pointer->global_history].operator--();
+        }
+    }
+    else { // predicted NT or not found in table
+        if (taken) { //the column equals zero since history is initialized to zero.
+            bp_pointer->global_state_machine_array[0].operator++();
+        } else {
+            bp_pointer->global_state_machine_array[0].operator--();
+        }
+    }
+    bp_pointer->global_history = (bp_pointer->global_history << 1) | taken;
+    bp_pointer->global_history &= create_align(bp_pointer->history_reg_size);
+    bp_pointer->history_cache[fsm_and_btb_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[fsm_and_btb_row][1] = pc_tag;
+    bp_pointer->history_cache[fsm_and_btb_row][3] = targetPC;
+}
+
+
+void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
+    uint32_t row_align = create_align(bp_pointer->BTB_size);
+    uint32_t tag_align = create_align(bp_pointer->tag_size);
+    uint32_t history_cache_row = (pc >> 2) & row_align;
+    uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
+    uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
+    uint32_t table_tag = bp_pointer->history_cache[fsm_and_btb_row][1];
+
+    if (bp_pointer->history_cache[fsm_and_btb_row][0] && table_tag == pc_tag){ // if found in table
+        uint32_t current_history = bp_pointer->history_cache[history_cache_row][2];
+        if(taken){ // if Taken
+            bp_pointer->global_state_machine_array[current_history].operator++();
+        } else {
+            bp_pointer->global_state_machine_array[current_history].operator--();
+        }
+        current_history = (current_history << 1) | taken;
+        current_history &= create_align(bp_pointer->history_reg_size);
+        bp_pointer->history_cache[history_cache_row][2] = current_history;
+    }
+    else { // predicted NT or not found in table
+        if (taken) { //the column equals zero since history is initialized to zero.
+            bp_pointer->global_state_machine_array[0].operator++();
+        } else {
+            bp_pointer->global_state_machine_array[0].operator--();
+        }
+        bp_pointer->history_cache[history_cache_row][2] = uint32_t(taken); // reset history according to 'taken' value.
+    }
+    bp_pointer->history_cache[fsm_and_btb_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[fsm_and_btb_row][1] = pc_tag;
+    bp_pointer->history_cache[fsm_and_btb_row][3] = targetPC;
+}
+
+
+
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
+    uint32_t destination_we_predicted;
+    bp_pointer->branch_counter++; // increase branch number by one
+    bool what_we_predicted = BP_predict(pc, &destination_we_predicted);
+    if (targetPc != pred_dst && taken != what_we_predicted){
+        bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
+    }
+
+    if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
+        update_lh_lfsm(pc, targetPc, taken);
+        return;
+    }
+    else if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == GLOBAL){
+        update_lh_gfsm(pc, targetPc, taken);
+        return;
+    }
+    else if (bp_pointer->history_type == GLOBAL && bp_pointer->state_machine_type == GLOBAL){
+        update_gh_gfsm(pc, targetPc, taken);
+        return;
+    }
+    else if (bp_pointer->history_type == GLOBAL && bp_pointer->state_machine_type == LOCAL){
+        update_gh_lfsm(pc, targetPc, taken);
+        return;
+    }
 	return;
 }
 
@@ -264,7 +416,6 @@ void BP_GetStats(SIM_stats *curStats){
      */
     int temp_size=0;
     int entries = bp_pointer->BTB_size;
-    int valid_bit = 1;
     int tag_size = bp_pointer->tag_size;
     int target_size = 30; //TODO: consider removing the excess 2 bits.
     int history_size = bp_pointer->history_reg_size;
