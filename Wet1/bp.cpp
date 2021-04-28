@@ -266,14 +266,14 @@ void BP_GetStats(SIM_stats *curStats){
     int entries = bp_pointer->BTB_size;
     int valid_bit = 1;
     int tag_size = bp_pointer->tag_size;
-    int target_size = sizeof(uint32_t); //TODO: consider removing the excess 2 bits.
+    int target_size = 30; //TODO: consider removing the excess 2 bits.
     int history_size = bp_pointer->history_reg_size;
 
     /**
      * the following line should be calculated as such in either case (there is no dependency
      * in the type on the history/ state machine (local\global)
      */
-    temp_size += entries * (valid_bit + tag_size + target_size);
+    temp_size += entries * (tag_size + target_size);
 
     //adding the relevant size for local\global state machine
     if (bp_pointer->state_machine_type == LOCAL){
