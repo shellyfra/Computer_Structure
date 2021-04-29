@@ -432,9 +432,8 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     BP* temp = bp_pointer;
     print();
-    uint32_t destination_we_predicted;
     bp_pointer->branch_counter++; // increase branch number by one
-    if ((taken && (targetPc != pc)) || (!taken && (pred_dst != pc +4))){
+    if ((taken && (targetPc != pred_dst)) || (!taken && (pred_dst != pc +4))){
         bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
     }
 
