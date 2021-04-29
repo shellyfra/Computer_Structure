@@ -434,9 +434,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     print();
     uint32_t destination_we_predicted;
     bp_pointer->branch_counter++; // increase branch number by one
-    bool what_we_predicted = BP_predict(pc, &destination_we_predicted);
-    bool check_prediction = taken ? ( targetPc == pc ) : (pred_dst == pc +4);
-    if (!check_prediction){
+    if ((taken && (targetPc != pc)) || (!taken && (pred_dst != pc +4))){
         bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
     }
 
