@@ -13,6 +13,7 @@ enum SHARE_TYPE{GLOBAL, LOCAL};
 const int MAX_BTB_SIZE = 32;
 const int  MAX_STATE_MACHINES = 256; // 2^8 (8 = max size of history)
 const int COLUMNS_BTB = 4; // for [0] = valid bit ,[1] = tag and [2] = history, [3] = jmp_ip
+const int ADDRESS_SIZE = 30;
 enum FSM_STATE{SNT = 0, WNT = 1, WT = 2, ST = 3};
 
 class FSM {
@@ -157,6 +158,7 @@ FSM_STATE& FSM::operator--(){
 }
 uint32_t create_align(uint32_t size){
     uint32_t align = 0;
+    if (size == 1) return 1; // return 1 bit align if =1 (log2(1) = 0)
     for (int i = 0 ; i < size; i ++){
         align |= (1 << i);
     }
@@ -239,9 +241,7 @@ bool check_lh_gfsm(uint32_t pc, uint32_t *dst){
 }
 
 bool check_gh_gfsm(uint32_t pc, uint32_t *dst) {
-    // #############################################################################
-    // TODO : ASK Lina !! how do we search in the BT ? do we need to check if the branch exists in the table ?
-    // #############################################################################
+
     uint32_t btb_row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
@@ -435,7 +435,8 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     uint32_t destination_we_predicted;
     bp_pointer->branch_counter++; // increase branch number by one
     bool what_we_predicted = BP_predict(pc, &destination_we_predicted);
-    if (targetPc != pred_dst ){ // TODO: ask lina about that!!! (&& taken != what_we_predicted)
+    bool check_prediction = taken ? ( targetPc == pc ) : (pred_dst == pc +4);
+    if (!check_prediction){
         bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
     }
 
@@ -474,7 +475,7 @@ void BP_GetStats(SIM_stats *curStats){
     int temp_size=0;
     int entries = bp_pointer->BTB_size;
     int tag_size = bp_pointer->tag_size;
-    int target_size = 30; //TODO: consider removing the excess 2 bits.
+    int target_size = ADDRESS_SIZE; //TODO: consider removing the excess 2 bits.
     int history_size = bp_pointer->history_reg_size;
 
     /**
