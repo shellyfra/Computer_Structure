@@ -109,7 +109,7 @@ void print(){
         std::cout << std::endl;
     } else {
         for (int i = 0; i < bp_pointer->local_state_machine_array.size(); ++i) {
-            for (int j = 0; j < bp_pointer->history_reg_size; ++j) {
+            for (int j = 0; j < pow(2,bp_pointer->history_reg_size); ++j) {
                 std::cout << bp_pointer->local_state_machine_array.at(i).at(j).get_state_int() << " | ";
             }
             if (i+1 < bp_pointer->history_cache.size()) {
@@ -278,9 +278,14 @@ bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
     *dst = pc +4;
     return false;
 }
-
+int k = 0;
 bool BP_predict(uint32_t pc, uint32_t *dst){
     BP* temp = bp_pointer;
+    k++;
+    if (k == 28){
+        std::cout << "here" << std::endl;
+    }
+
     print();
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
