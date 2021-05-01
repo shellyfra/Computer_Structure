@@ -278,13 +278,9 @@ bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
     *dst = pc +4;
     return false;
 }
-int k = 0;
+
 bool BP_predict(uint32_t pc, uint32_t *dst){
     BP* temp = bp_pointer;
-    k++;
-    if (k == 28){
-        std::cout << "here" << std::endl;
-    }
 
     //print();
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
@@ -328,7 +324,7 @@ void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
     }
     else { //doesnt exist in table - update value to pc + 4
         // erase history for current branch if running over existing branch
-        for (int i = 0; i <bp_pointer->local_state_machine_array[history_cache_row].size() ; ++i) {
+        for (unsigned int i = 0; i <bp_pointer->local_state_machine_array[history_cache_row].size() ; i++) {
             bp_pointer->local_state_machine_array[history_cache_row][i] = bp_pointer->start_state;
         }
         if (taken) { //the column equals zero since history is initialized to zero.
@@ -343,7 +339,6 @@ void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
     bp_pointer->history_cache[history_cache_row][1] = pc_tag;
     bp_pointer->history_cache[history_cache_row][3] = targetPC;
 }
-
 
 void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
     uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
@@ -362,13 +357,13 @@ void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
     }
     else { // predicted NT or not found in table
         // erase history for current branch if running over existing branch
-        for (int i = 0; i <bp_pointer->local_state_machine_array[fsm_and_btb_row].size() ; ++i) {
+        for (unsigned int i = 0; i < bp_pointer->local_state_machine_array[fsm_and_btb_row].size() ; i++) {
             bp_pointer->local_state_machine_array[fsm_and_btb_row][i] = bp_pointer->start_state;
         }
         if (taken) { //the column equals zero since history is initialized to zero.
-            bp_pointer->local_state_machine_array[fsm_and_btb_row][0].operator++();
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][bp_pointer->global_history ].operator++();
         } else {
-            bp_pointer->local_state_machine_array[fsm_and_btb_row][0].operator--();
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][bp_pointer->global_history ].operator--();
         }
     }
     bp_pointer->global_history = (bp_pointer->global_history << 1) | taken;
@@ -396,9 +391,9 @@ void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
     }
     else { // predicted NT or not found in table
         if (taken) { //the column equals zero since history is initialized to zero.
-            bp_pointer->global_state_machine_array[0].operator++();
+            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator++();
         } else {
-            bp_pointer->global_state_machine_array[0].operator--();
+            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator--();
         }
     }
     bp_pointer->global_history = (bp_pointer->global_history << 1) | taken;
