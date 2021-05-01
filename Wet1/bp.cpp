@@ -286,7 +286,7 @@ bool BP_predict(uint32_t pc, uint32_t *dst){
         std::cout << "here" << std::endl;
     }
 
-    print();
+    //print();
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
         //TODO : if btb_size = 1 || history reg == 1
@@ -327,6 +327,10 @@ void update_lh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
         bp_pointer->history_cache[history_cache_row][2] = sm_column;
     }
     else { //doesnt exist in table - update value to pc + 4
+        // erase history for current branch if running over existing branch
+        for (int i = 0; i <bp_pointer->local_state_machine_array[history_cache_row].size() ; ++i) {
+            bp_pointer->local_state_machine_array[history_cache_row][i] = bp_pointer->start_state;
+        }
         if (taken) { //the column equals zero since history is initialized to zero.
             bp_pointer->local_state_machine_array[history_cache_row][0].operator++();
         } else {
@@ -357,6 +361,10 @@ void update_gh_lfsm(uint32_t pc, uint32_t targetPC, bool taken){
         }
     }
     else { // predicted NT or not found in table
+        // erase history for current branch if running over existing branch
+        for (int i = 0; i <bp_pointer->local_state_machine_array[fsm_and_btb_row].size() ; ++i) {
+            bp_pointer->local_state_machine_array[fsm_and_btb_row][i] = bp_pointer->start_state;
+        }
         if (taken) { //the column equals zero since history is initialized to zero.
             bp_pointer->local_state_machine_array[fsm_and_btb_row][0].operator++();
         } else {
@@ -436,7 +444,6 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     BP* temp = bp_pointer;
-    print();
     bp_pointer->branch_counter++; // increase branch number by one
     if ((taken && (targetPc != pred_dst)) || (!taken && (pred_dst != pc +4))){
         bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
@@ -444,20 +451,25 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
 
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         update_lh_lfsm(pc, targetPc, taken);
+        //print();
         return;
     }
     else if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == GLOBAL){
         update_lh_gfsm(pc, targetPc, taken);
+        //print();
         return;
     }
     else if (bp_pointer->history_type == GLOBAL && bp_pointer->state_machine_type == GLOBAL){
         update_gh_gfsm(pc, targetPc, taken);
+        //print();
         return;
     }
     else if (bp_pointer->history_type == GLOBAL && bp_pointer->state_machine_type == LOCAL){
         update_gh_lfsm(pc, targetPc, taken);
+        //print();
         return;
     }
+
 	return;
 }
 
