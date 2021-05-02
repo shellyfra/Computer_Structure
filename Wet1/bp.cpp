@@ -88,7 +88,7 @@ void print(){
     if (bp_pointer->history_type == GLOBAL){
         std::cout << bp_pointer->global_history << std::endl;
     } else {
-בג        for (unsigned int i = 0; i < bp_pointer->history_cache.size(); ++i) {
+       for (unsigned int i = 0; i < bp_pointer->history_cache.size(); ++i) {
             for (unsigned int j = 0; j < bp_pointer->history_cache.at(0).size(); ++j) {
                 std::cout << bp_pointer->history_cache.at(i).at(j) << " | ";
             }
