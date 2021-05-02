@@ -1,0 +1,15 @@
+#!/bin/bash
+
+
+for (( c=1; c<=20; c++ ))
+do
+
+  ./bp_main tests_segel/example$c.trc > tests_segel/example$c.myout
+  if (( `diff tests_segel/example$c.out  tests_segel/example$c.myout | wc -l` == 0 )); then
+    echo -e "\e[0msuccess  $c    -----   " 
+		
+  else
+    echo -e "\e[7mfailure  $c              -------"     `diff tests/test$c.out  tests/test$c.myout`
+    
+  fi
+done
