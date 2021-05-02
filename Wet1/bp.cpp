@@ -220,11 +220,11 @@ bool check_lh_gfsm(uint32_t pc, uint32_t *dst){
         // check what row to get in global history FSM
         if (bp_pointer->using_share_type == USING_SHARE_LSB) {
             uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
-            history_fsm_row = (pc >> 2) & share_lsb;
+            history_fsm_row = ((pc >> 2) & share_lsb)^bp_pointer->history_cache[history_cache_row][2];
         }
-        if (bp_pointer->using_share_type == USING_SHARE_MID) {
+        else if (bp_pointer->using_share_type == USING_SHARE_MID) {
             uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
-            history_fsm_row = (pc >> 16) & share_lsb;
+            history_fsm_row = ((pc >> 16) & share_lsb)^bp_pointer->history_cache[history_cache_row][2];
         }
         else { // not using share
             history_fsm_row = bp_pointer->history_cache[history_cache_row][2];
@@ -250,7 +250,20 @@ bool check_gh_gfsm(uint32_t pc, uint32_t *dst) {
     uint32_t table_tag = bp_pointer->history_cache[history_cache_row][1];
 
     if (bp_pointer->history_cache[history_cache_row][0] && table_tag == pc_tag){ // if found in table
-        if(bp_pointer->global_state_machine_array[bp_pointer->global_history].getState()){ // if Taken
+        uint32_t history_fsm_row = 0;
+        // check what row to get in global history FSM
+        if (bp_pointer->using_share_type == USING_SHARE_LSB) {
+            uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+            history_fsm_row = ((pc >> 2) & share_lsb)^bp_pointer->global_history;
+        }
+        else if (bp_pointer->using_share_type == USING_SHARE_MID) {
+            uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+            history_fsm_row = ((pc >> 16) & share_lsb)^bp_pointer->global_history;
+        }
+        else { // not using share
+            history_fsm_row = bp_pointer->global_history;
+        }
+        if(bp_pointer->global_state_machine_array[history_fsm_row].getState()){ // if Taken
             *dst = bp_pointer->history_cache[history_cache_row][3]; // put dst in the pointer
             return true; // if got here -> state is Taken so we return True
         }
@@ -378,49 +391,75 @@ void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
     uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
 
-    uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
+    uint32_t btb_row = (pc >> 2) & row_align;
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
-    uint32_t table_tag = bp_pointer->history_cache[fsm_and_btb_row][1];
+    uint32_t table_tag = bp_pointer->history_cache[btb_row][1];
 
-    if (bp_pointer->history_cache[fsm_and_btb_row][0] && table_tag == pc_tag){ // if found in table
-        if(taken){ // if Taken
-            bp_pointer->global_state_machine_array[bp_pointer->global_history].operator++();
-        } else {
-            bp_pointer->global_state_machine_array[bp_pointer->global_history].operator--();
-        }
+    //if (bp_pointer->history_cache[btb_row][0] && table_tag == pc_tag){ // if found in table
+    uint32_t history_fsm_row = 0;
+    // check what row to get in global history FSM
+    if (bp_pointer->using_share_type == USING_SHARE_LSB) {
+        uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+        history_fsm_row = ((pc >> 2) & share_lsb)^bp_pointer->global_history;
     }
-    else { // predicted NT or not found in table
-        if (taken) { //the column equals zero since history is initialized to zero.
-            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator++();
-        } else {
-            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator--();
-        }
+    else if (bp_pointer->using_share_type == USING_SHARE_MID) {
+        uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+        history_fsm_row = ((pc >> 16) & share_lsb)^bp_pointer->global_history;
     }
+    else { // not using share
+        history_fsm_row = bp_pointer->global_history;
+    }
+
+    if(taken){ // if Taken
+        bp_pointer->global_state_machine_array[history_fsm_row].operator++();
+    } else {
+        bp_pointer->global_state_machine_array[history_fsm_row].operator--();
+    }
+
+//    else { // predicted NT or not found in table
+//        if (taken) {
+//            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator++();
+//        } else {
+//            bp_pointer->global_state_machine_array[bp_pointer->global_history ].operator--();
+//        }
+//    }
     bp_pointer->global_history = (bp_pointer->global_history << 1) | taken;
     bp_pointer->global_history &= create_align(bp_pointer->history_reg_size);
-    bp_pointer->history_cache[fsm_and_btb_row][0] = 1; // turn on valid bit
-    bp_pointer->history_cache[fsm_and_btb_row][1] = pc_tag;
-    bp_pointer->history_cache[fsm_and_btb_row][3] = targetPC;
+    bp_pointer->history_cache[btb_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[btb_row][1] = pc_tag;
+    bp_pointer->history_cache[btb_row][3] = targetPC;
 }
-
 
 void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
     uint32_t row_align = create_align(log2(bp_pointer->BTB_size));
     uint32_t tag_align = create_align(bp_pointer->tag_size);
-    uint32_t fsm_and_btb_row = (pc >> 2) & row_align;
+    uint32_t btb_row = (pc >> 2) & row_align;
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
-    uint32_t table_tag = bp_pointer->history_cache[fsm_and_btb_row][1];
+    uint32_t table_tag = bp_pointer->history_cache[btb_row][1];
 
-    if (bp_pointer->history_cache[fsm_and_btb_row][0] && table_tag == pc_tag){ // if found in table
-        uint32_t current_history = bp_pointer->history_cache[fsm_and_btb_row][2];
+    if (bp_pointer->history_cache[btb_row][0] && table_tag == pc_tag){ // if found in table
+        uint32_t current_history = bp_pointer->history_cache[btb_row][2];
+        uint32_t history_fsm_row = 0;
+        // check what row to get in global history FSM
+        if (bp_pointer->using_share_type == USING_SHARE_LSB) {
+            uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+            history_fsm_row = ((pc >> 2) & share_lsb)^bp_pointer->history_cache[btb_row][2];
+        }
+        else if (bp_pointer->using_share_type == USING_SHARE_MID) {
+            uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+            history_fsm_row = ((pc >> 16) & share_lsb)^bp_pointer->history_cache[btb_row][2];
+        }
+        else { // not using share
+            history_fsm_row = bp_pointer->history_cache[btb_row][2];
+        }
         if(taken){ // if Taken
-            bp_pointer->global_state_machine_array[current_history].operator++();
+            bp_pointer->global_state_machine_array[history_fsm_row].operator++();
         } else {
-            bp_pointer->global_state_machine_array[current_history].operator--();
+            bp_pointer->global_state_machine_array[history_fsm_row].operator--();
         }
         current_history = (current_history << 1) | taken;
         current_history &= create_align(bp_pointer->history_reg_size);
-        bp_pointer->history_cache[fsm_and_btb_row][2] = current_history;
+        bp_pointer->history_cache[btb_row][2] = current_history;
     }
     else { // predicted NT or not found in table
         if (taken) { //the column equals zero since history is initialized to zero.
@@ -428,11 +467,11 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
         } else {
             bp_pointer->global_state_machine_array[0].operator--();
         }
-        bp_pointer->history_cache[fsm_and_btb_row][2] = uint32_t(taken); // reset history according to 'taken' value.
+        bp_pointer->history_cache[btb_row][2] = uint32_t(taken); // reset history according to 'taken' value.
     }
-    bp_pointer->history_cache[fsm_and_btb_row][0] = 1; // turn on valid bit
-    bp_pointer->history_cache[fsm_and_btb_row][1] = pc_tag;
-    bp_pointer->history_cache[fsm_and_btb_row][3] = targetPC;
+    bp_pointer->history_cache[btb_row][0] = 1; // turn on valid bit
+    bp_pointer->history_cache[btb_row][1] = pc_tag;
+    bp_pointer->history_cache[btb_row][3] = targetPC;
 }
 
 
