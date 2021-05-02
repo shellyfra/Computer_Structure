@@ -88,8 +88,8 @@ void print(){
     if (bp_pointer->history_type == GLOBAL){
         std::cout << bp_pointer->global_history << std::endl;
     } else {
-        for (int i = 0; i < bp_pointer->history_cache.size(); ++i) {
-            for (int j = 0; j < bp_pointer->history_cache.at(0).size(); ++j) {
+בג        for (unsigned int i = 0; i < bp_pointer->history_cache.size(); ++i) {
+            for (unsigned int j = 0; j < bp_pointer->history_cache.at(0).size(); ++j) {
                 std::cout << bp_pointer->history_cache.at(i).at(j) << " | ";
             }
             if (i+1 < bp_pointer->history_cache.size()) {
@@ -103,13 +103,13 @@ void print(){
     //std::cout << "_____________" << std::endl;
     std::cout << "| ";
     if (bp_pointer->state_machine_type == GLOBAL){
-        for (int i = 0; i < bp_pointer->global_state_machine_array.size(); ++i) {
+        for (unsigned int i = 0; i < bp_pointer->global_state_machine_array.size(); ++i) {
             std::cout << bp_pointer->global_state_machine_array.at(i).get_state_int() << " | ";
         }
         std::cout << std::endl;
     } else {
-        for (int i = 0; i < bp_pointer->local_state_machine_array.size(); ++i) {
-            for (int j = 0; j < pow(2,bp_pointer->history_reg_size); ++j) {
+        for (unsigned int i = 0; i < bp_pointer->local_state_machine_array.size(); ++i) {
+            for (unsigned int j = 0; j < pow(2,bp_pointer->history_reg_size); ++j) {
                 std::cout << bp_pointer->local_state_machine_array.at(i).at(j).get_state_int() << " | ";
             }
             if (i+1 < bp_pointer->history_cache.size()) {
@@ -159,7 +159,7 @@ FSM_STATE& FSM::operator--(){
 uint32_t create_align(uint32_t size){
     uint32_t align = 0;
     if (size == 1) return 1; // return 1 bit align if =1 (log2(1) = 0)
-    for (int i = 0 ; i < size; i ++){
+    for (unsigned int i = 0 ; i < size; i ++){
         align |= (1 << i);
     }
     return align;
@@ -293,8 +293,6 @@ bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
 }
 
 bool BP_predict(uint32_t pc, uint32_t *dst){
-    BP* temp = bp_pointer;
-
     //print();
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
@@ -393,7 +391,6 @@ void update_gh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
     uint32_t btb_row = (pc >> 2) & row_align;
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
-    uint32_t table_tag = bp_pointer->history_cache[btb_row][1];
 
     //if (bp_pointer->history_cache[btb_row][0] && table_tag == pc_tag){ // if found in table
     uint32_t history_fsm_row = 0;
@@ -476,7 +473,6 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
 
 
 void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
-    BP* temp = bp_pointer;
     bp_pointer->branch_counter++; // increase branch number by one
     if ((taken && (targetPc != pred_dst)) || (!taken && (pred_dst != pc +4))){
         bp_pointer->wrong_prediction_counter++; //increase wrong prediction counter
@@ -524,12 +520,13 @@ void BP_GetStats(SIM_stats *curStats){
     int tag_size = bp_pointer->tag_size;
     int target_size = ADDRESS_SIZE; //TODO: consider removing the excess 2 bits.
     int history_size = bp_pointer->history_reg_size;
+    int valid_bit = 1;
 
     /**
      * the following line should be calculated as such in either case (there is no dependency
      * in the type on the history/ state machine (local\global)
      */
-    temp_size += entries * (tag_size + target_size);
+    temp_size += entries * (valid_bit + tag_size + target_size);
 
     //adding the relevant size for local\global state machine
     if (bp_pointer->state_machine_type == LOCAL){
