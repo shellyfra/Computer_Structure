@@ -423,36 +423,34 @@ void update_lh_gfsm(uint32_t pc, uint32_t targetPC, bool taken){
     uint32_t pc_tag = ((pc >> (int(log2(bp_pointer->BTB_size)) + 2)) & tag_align);
     uint32_t table_tag = bp_pointer->history_cache[btb_row][1];
 
-    if (bp_pointer->history_cache[btb_row][0] && table_tag == pc_tag){ // if found in table
-        uint32_t current_history = bp_pointer->history_cache[btb_row][2];
-        uint32_t history_fsm_row = 0;
-        // check what row to get in global history FSM
-        if (bp_pointer->using_share_type == USING_SHARE_LSB) {
-            uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
-            history_fsm_row = ((pc >> 2) & share_lsb)^current_history;
-        }
-        else if (bp_pointer->using_share_type == USING_SHARE_MID) {
-            uint32_t share_mid = create_align(bp_pointer->history_reg_size);
-            history_fsm_row = ((pc >> 16) & share_mid)^current_history;
-        }
-        else { // not using share
-            history_fsm_row = current_history;
-        }
-        if(taken){ // if Taken
-            bp_pointer->global_state_machine_array[history_fsm_row].operator++();
-        } else {
-            bp_pointer->global_state_machine_array[history_fsm_row].operator--();
-        }
+    // update global FSM
+    bool found_in_table = (bp_pointer->history_cache[btb_row][0] && (table_tag == pc_tag));
+    uint32_t current_history = found_in_table ? bp_pointer->history_cache[btb_row][2] : 0;
+    uint32_t history_fsm_row = 0;
+    // check what row to get in global history FSM
+    if (bp_pointer->using_share_type == USING_SHARE_LSB) {
+        uint32_t share_lsb = create_align(bp_pointer->history_reg_size);
+        history_fsm_row = ((pc >> 2) & share_lsb)^current_history;
+    }
+    else if (bp_pointer->using_share_type == USING_SHARE_MID) {
+        uint32_t share_mid = create_align(bp_pointer->history_reg_size);
+        history_fsm_row = ((pc >> 16) & share_mid)^current_history;
+    }
+    else { // not using share
+        history_fsm_row = current_history;
+    }
+    if(taken){ // if Taken
+        bp_pointer->global_state_machine_array[history_fsm_row].operator++();
+    } else {
+        bp_pointer->global_state_machine_array[history_fsm_row].operator--();
+    }
+
+    if (found_in_table){ // if found in table
         current_history = (current_history << 1) | taken;
         current_history &= create_align(bp_pointer->history_reg_size);
         bp_pointer->history_cache[btb_row][2] = current_history;
     }
-    else { // predicted NT or not found in table
-        if (taken) { //the column equals zero since history is initialized to zero.
-            bp_pointer->global_state_machine_array[0].operator++();
-        } else {
-            bp_pointer->global_state_machine_array[0].operator--();
-        }
+    else { //  not found in table
         bp_pointer->history_cache[btb_row][2] = uint32_t(taken); // reset history according to 'taken' value.
     }
     bp_pointer->history_cache[btb_row][0] = 1; // turn on valid bit
@@ -484,7 +482,7 @@ void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst){
     }
     else if (bp_pointer->history_type == GLOBAL && bp_pointer->state_machine_type == LOCAL){
         update_gh_lfsm(pc, targetPc, taken);
-        //print();
+        //();
         return;
     }
 	return;
