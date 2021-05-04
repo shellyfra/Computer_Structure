@@ -181,10 +181,7 @@ int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned f
         bp_pointer->global_state_machine_array.resize(num_state_machines,FSM(bp_pointer->start_state));
     }
 
-    //if (bp_pointer->history_type == LOCAL) { //private history
     bp_pointer->history_cache.resize(bp_pointer->BTB_size, std::vector<uint32_t>(COLUMNS_BTB, 0));
-    //}
-    // else shared history - need also to init BTB
     return 0;
 }
 
@@ -292,8 +289,6 @@ bool check_gh_lfsm(uint32_t pc, uint32_t *dst){
 
 bool BP_predict(uint32_t pc, uint32_t *dst){
     //print();
-    //TODO : if btb_size = 1 || history reg == 1
-    //TODO : check if tag = 0 ? need to check !! do it in align
     if (bp_pointer->history_type == LOCAL && bp_pointer->state_machine_type == LOCAL){
         return check_lh_lfsm(pc, dst);
     }
