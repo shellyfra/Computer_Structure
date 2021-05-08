@@ -142,6 +142,33 @@ CS_wet2/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\CS_wet2.dir\build.make CMakeFiles/CS_wet2.dir/build
 .PHONY : CS_wet2/fast
 
+cache.obj: cache.cpp.obj
+
+.PHONY : cache.obj
+
+# target to build an object file
+cache.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CS_wet2.dir\build.make CMakeFiles/CS_wet2.dir/cache.cpp.obj
+.PHONY : cache.cpp.obj
+
+cache.i: cache.cpp.i
+
+.PHONY : cache.i
+
+# target to preprocess a source file
+cache.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CS_wet2.dir\build.make CMakeFiles/CS_wet2.dir/cache.cpp.i
+.PHONY : cache.cpp.i
+
+cache.s: cache.cpp.s
+
+.PHONY : cache.s
+
+# target to generate assembly for a file
+cache.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CS_wet2.dir\build.make CMakeFiles/CS_wet2.dir/cache.cpp.s
+.PHONY : cache.cpp.s
+
 cacheSim.obj: cacheSim.cpp.obj
 
 .PHONY : cacheSim.obj
@@ -178,6 +205,9 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... CS_wet2
+	@echo ... cache.obj
+	@echo ... cache.i
+	@echo ... cache.s
 	@echo ... cacheSim.obj
 	@echo ... cacheSim.i
 	@echo ... cacheSim.s

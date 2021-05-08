@@ -6,13 +6,5 @@
 
 #IncludeRegexTransform: 
 
-C:/Clion/Computer_Structure/Computer_Structure/Wet2/cacheSim.cpp
-cstdlib
--
-iostream
--
-fstream
--
-sstream
--
+C:/Clion/Computer_Structure/Computer_Structure/Wet2/cache.cpp
 

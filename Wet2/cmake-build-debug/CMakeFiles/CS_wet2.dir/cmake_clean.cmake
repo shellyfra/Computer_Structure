@@ -1,4 +1,5 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/CS_wet2.dir/cache.cpp.obj"
   "CMakeFiles/CS_wet2.dir/cacheSim.cpp.obj"
   "CS_wet2.exe"
   "CS_wet2.exe.manifest"

@@ -4,6 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "C:/Clion/Computer_Structure/Computer_Structure/Wet2/cache.cpp" "C:/Clion/Computer_Structure/Computer_Structure/Wet2/cmake-build-debug/CMakeFiles/CS_wet2.dir/cache.cpp.obj"
   "C:/Clion/Computer_Structure/Computer_Structure/Wet2/cacheSim.cpp" "C:/Clion/Computer_Structure/Computer_Structure/Wet2/cmake-build-debug/CMakeFiles/CS_wet2.dir/cacheSim.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")

@@ -80,6 +80,9 @@
 				</MakeCommands>
 			</Target>
 		</Build>
+		<Unit filename="C:/Clion/Computer_Structure/Computer_Structure/Wet2/cache.cpp">
+			<Option target="CS_wet2"/>
+		</Unit>
 		<Unit filename="C:/Clion/Computer_Structure/Computer_Structure/Wet2/cacheSim.cpp">
 			<Option target="CS_wet2"/>
 		</Unit>
