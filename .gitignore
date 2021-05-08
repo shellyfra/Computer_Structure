@@ -24,8 +24,8 @@
 *.lai
 *.la
 *.a
-*.lib
-cmake-build-debug/CmakeFiles/*
+*.lib   
 # Executables
 *.exe
 *.app
+/Wet2/cmake-build-debug/
