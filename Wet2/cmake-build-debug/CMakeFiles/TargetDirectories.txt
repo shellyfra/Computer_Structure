@@ -1,3 +1,0 @@
-C:/Clion/Computer_Structure/Computer_Structure/Wet2/cmake-build-debug/CMakeFiles/CS_wet2.dir
-C:/Clion/Computer_Structure/Computer_Structure/Wet2/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Clion/Computer_Structure/Computer_Structure/Wet2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
