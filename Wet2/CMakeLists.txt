@@ -3,4 +3,4 @@ project(CS_wet1)
 
 set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-std=c++11 -Wall )
-add_executable(CS_wet2 cacheSim.cpp)
+add_executable(CS_wet2 cacheSim.cpp, cache.cpp)
