@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/Clion/Computer_Structure/Computer_Structure/Wet2/cacheSim.cpp
+cstdlib
+-
+iostream
+-
+fstream
+-
+sstream
+-
+
