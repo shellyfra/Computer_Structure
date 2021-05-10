@@ -8,6 +8,7 @@
 #include <cmath>
 #include <utility>
 #include<bits/stdc++.h>
+#include <algorithm>
 
 
 using std::FILE;
@@ -39,6 +40,7 @@ public:
     ~Cache() = default;
     Cache(Cache& other) = default;
     bool in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair);
+    void add(unsigned long int address, unsigned long int LRU_address);
 };
 
 bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
@@ -56,18 +58,42 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     return false;
 }
 
+void Cache::add(unsigned long address, unsigned long LRU_address) {
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag  TODO : check !! if from LRU/regular address
+    unsigned long int tag_LRU = LRU_address >> offset_size; // get the upper bits of the address to check with tag
+    unsigned set = tag_LRU%this->num_of_rows;
+
+    for (auto &data_address :  this->data[set]){ // cannot have both -> if lru_address == 0 ( does not exist) then will not enter due to data_address.second == EXIST
+        // need to replace LRU_address with address
+        if (data_address.first == tag_LRU && data_address.second == EXIST){
+            data_address.first = tag;
+            data_address.second = EXIST;
+            break;
+        }
+        // need to find a free location in N-ways
+        if (data_address.second == DOESNT_EXIST){ // add the data to the available spot
+            data_address.first = tag;
+            data_address.second = EXIST;
+            break;
+        }
+    }
+}
+
 class Memory {
 public:
     Cache* L1_cache;
     Cache* L2_cache;
     policy cache_policy;
-    unsigned block_size;
     unsigned access_count_L1 = 0;
+    unsigned miss_count_L1 = 0;
     unsigned access_count_L2 = 0;
+    unsigned miss_count_L2 = 0;
     unsigned access_count_mem = 0;
     unsigned dram_cycles;
     unsigned L1_cycles;
     unsigned L2_cycles;
+    unsigned block_size;
     std::vector< std::pair<unsigned, data_status> > LRU;
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
@@ -81,14 +107,50 @@ public:
         delete L2_cache;
     }
     Memory(Memory& other) = default;
-    void calc_operation(unsigned long int address, char op,	double* L1MissRate, double* L2MissRate);
+    void calc_operation(unsigned long int address, char op);
 };
 
-void Memory::calc_operation(unsigned long int address, char op, double *L1MissRate, double *L2MissRate) {
+void Memory::calc_operation(unsigned long int address, char op) {
     unsigned data_location = address % (this->block_size);
     std::pair <unsigned, data_status> *returned_pair;
+    access_count_L1++; // add the time to access L1 cache
     if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
-        auto itr = std::find (LRU.begin(), LRU.end(), address);
+        //LRU_L1.update(address); // TODO : if exists -> update that its the last used, else -> add to the end of the LRU list
+        //read or write does not matter here because we don't save data
+    }
+    else { // not is L1 cache -> check in L2
+        this->miss_count_L1++;
+        access_count_L2++;
+        if (this->L2_cache->in_cache(data_location, returned_pair) == true) { // in L2
+            if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
+                unsigned long int LRU_address;
+                L1_cache->add(address, LRU_address); // TODO : + get LRU address (use it only if remove is needed) : insert address
+                //LRU_L1.update(address);
+                //LRU_L2.update(address);
+                //LRU_L1.remove(LRU_address);
+                //LRU_L2.update(LRU_address);
+            }
+            else { // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
+                access_count_mem++; // update mem with the data
+                //LRU_L2.update(address); // TODO : ask!!
+                //LRU_L2.update(LRU_address);
+            }
+        }
+        else { // not in L2
+            miss_count_L2++;
+            access_count_mem++;
+            if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
+                unsigned long int LRU_address;
+                L1_cache->add(address, LRU_address); // TODO : + get LRU address
+                L2_cache->add(address, LRU_address); // TODO : + get LRU address
+                //LRU_L1.update(address);
+                //LRU_L2.update(address);
+                //LRU_L1.remove(LRU_address);
+                //LRU_L2.remove(LRU_address);
+            }
+             //else : go to mem and update the data
+             // do not update LRU at all
+        }
     }
 }
 
@@ -143,6 +205,7 @@ int main(int argc, char **argv) {
     string address;
     char operation = 0; // read (R) or write (W)
     unsigned long int num = 0;
+    auto cpu_mem = new Memory(MemCyc,BSize, L1Size, L2Size, L1Assoc, L2Assoc, L1Cyc, L2Cyc,WrAlloc );
 
 	while (getline(file, line)) {
 
@@ -167,14 +230,14 @@ int main(int argc, char **argv) {
 
 		// DEBUG - remove this line
 		cout << " (dec) " << num << endl;
-
+        cpu_mem->calc_operation(num, operation);
 	}
     double L1MissRate = 0;
     double L2MissRate = 0;
     double avgAccTime = 0;
-	Memory* cpu_mem = new Memory(MemCyc,BSize, L1Size, L2Size, L1Assoc, L2Assoc, L1Cyc, L2Cyc,WrAlloc );
-	cpu_mem->calc_operation(num, operation, &L1MissRate, &L2MissRate);
 
+    avgAccTime = (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/
+            (cpu_mem->access_count_L1 + cpu_mem->access_count_L2 + cpu_mem->access_count_mem);
 
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
