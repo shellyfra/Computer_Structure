@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <cmath>
+#include <utility>
 
 using std::FILE;
 using std::string;
@@ -26,11 +27,11 @@ public:
     unsigned int associative_level;
     unsigned int num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
-    std::vector< std::vector<data_status> > data;
+    std::vector< std::vector<std::pair<unsigned int, data_status>>> data;
     Cache(unsigned int cache_size, unsigned int block_size, unsigned int associative_level): size_of_cache(cache_size),
                                                                                              block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
-        data.resize(num_of_rows, std::vector<data_status>(associative_level,DOESNT_EXIST));
+        data.resize(num_of_rows, std::vector<std::pair<unsigned int, data_status>>(associative_level,std::make_pair(0,DOESNT_EXIST)));
     }
     ~Cache() = default;
     Cache(Cache& other) = default;
@@ -61,6 +62,10 @@ public:
     Memory(Memory& other) = default;
     void calc_operation(unsigned long int address, char op,	double* L1MissRate, double* L2MissRate);
 };
+
+void Memory::calc_operation(unsigned long address, char op, double *L1MissRate, double *L2MissRate) {
+
+}
 
 int main(int argc, char **argv) {
 
@@ -150,5 +155,6 @@ int main(int argc, char **argv) {
 	printf("L2miss=%.03f ", L2MissRate);
 	printf("AccTimeAvg=%.03f\n", avgAccTime);
 
+	delete cpu_mem;
 	return 0;
 }
