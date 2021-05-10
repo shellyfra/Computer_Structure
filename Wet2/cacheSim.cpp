@@ -27,7 +27,7 @@ public:
     unsigned block_size;
     unsigned num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
-    std::vector< std::vector<std::pair<unsigned int, data_status>>> data;
+    std::vector< std::vector<std::pair<unsigned, data_status>>> data;
     Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
@@ -67,6 +67,7 @@ public:
 
 void Memory::calc_operation(unsigned long address, char op, double *L1MissRate, double *L2MissRate) {
     unsigned data_location = address % (this->block_size);
+    
 }
 
 int main(int argc, char **argv) {
