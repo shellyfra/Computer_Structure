@@ -36,8 +36,23 @@ public:
     }
     ~Cache() = default;
     Cache(Cache& other) = default;
-    bool in_cache(unsigned int address);
+    bool in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair);
 };
+
+bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
+    if (return_pair == nullptr) return false;
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
+    unsigned set = tag%this->num_of_rows;
+    for (int i = 0; i < this->associative_level ; ++i) {
+        if (this->data[set][i].first == tag) {
+            *return_pair = this->data[set][i];
+            return true;
+        }
+    }
+    return_pair = nullptr;
+    return false;
+}
 
 class Memory {
 public:
@@ -66,7 +81,7 @@ public:
     void calc_operation(unsigned long int address, char op,	double* L1MissRate, double* L2MissRate);
 };
 
-void Memory::calc_operation(unsigned long address, char op, double *L1MissRate, double *L2MissRate) {
+void Memory::calc_operation(unsigned long int address, char op, double *L1MissRate, double *L2MissRate) {
     unsigned data_location = address % (this->block_size);
     
 }
