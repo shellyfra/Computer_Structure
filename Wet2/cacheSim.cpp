@@ -22,16 +22,16 @@ typedef enum {DOESNT_EXIST = 0 , EXIST = 1} data_status;
 
 class Cache {
 public:
-    unsigned int size_of_cache;
-    unsigned int associative_level;
-    unsigned int block_size;
-    unsigned int num_of_rows; // size_of_cache /(block_size * associative_level)
+    unsigned size_of_cache;
+    unsigned associative_level;
+    unsigned block_size;
+    unsigned num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
     std::vector< std::vector<std::pair<unsigned int, data_status>>> data;
-    Cache(unsigned int cache_size, unsigned int block_size, unsigned int associative_level): size_of_cache(cache_size),
+    Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
-        data.resize(num_of_rows, std::vector<std::pair<unsigned int, data_status>>(associative_level,
+        data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(associative_level,
                 std::make_pair(0,DOESNT_EXIST)));
     }
     ~Cache() = default;
@@ -44,13 +44,13 @@ public:
     Cache* L1_cache;
     Cache* L2_cache;
     policy cache_policy;
-    unsigned int block_size;
-    int access_count_L1 = 0;
-    int access_count_L2 = 0;
-    int access_count_mem = 0;
-    unsigned int dram_cycles;
-    unsigned int L1_cycles;
-    unsigned int L2_cycles;
+    unsigned block_size;
+    unsigned access_count_L1 = 0;
+    unsigned access_count_L2 = 0;
+    unsigned access_count_mem = 0;
+    unsigned dram_cycles;
+    unsigned L1_cycles;
+    unsigned L2_cycles;
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
            dram_cycles(MemCyc), L1_cycles(L1Cyc),L2_cycles(L2Cyc), block_size(pow(2,BSize)){ // c'tor
@@ -67,7 +67,7 @@ public:
 };
 
 void Memory::calc_operation(unsigned long address, char op, double *L1MissRate, double *L2MissRate) {
-    int data_location = address % (this->block_size);
+    unsigned data_location = address % (this->block_size);
 }
 
 int main(int argc, char **argv) {
