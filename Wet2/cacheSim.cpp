@@ -36,6 +36,7 @@ public:
     }
     ~Cache() = default;
     Cache(Cache& other) = default;
+    bool in_cache(unsigned int address);
 };
 
 class Memory {
