@@ -12,6 +12,8 @@ using std::endl;
 using std::cerr;
 using std::ifstream;
 using std::stringstream;
+class memory;
+class cache;
 
 int main(int argc, char **argv) {
 
@@ -61,12 +63,14 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 	}
+    string address;
+    char operation = 0; // read (R) or write (W)
+    unsigned long int num = 0;
 
 	while (getline(file, line)) {
 
 		stringstream ss(line);
-		string address;
-		char operation = 0; // read (R) or write (W)
+
 		if (!(ss >> operation >> address)) {
 			// Operation appears in an Invalid format
 			cout << "Command Format error" << endl;
@@ -81,7 +85,7 @@ int main(int argc, char **argv) {
 		// DEBUG - remove this line
 		cout << ", address (hex)" << cutAddress;
 
-		unsigned long int num = 0;
+
 		num = strtoul(cutAddress.c_str(), NULL, 16);
 
 		// DEBUG - remove this line
@@ -89,6 +93,8 @@ int main(int argc, char **argv) {
 
 	}
 
+	memory cpu_mem(MemCyc, BSize, L1Size, L2Size, L1Assoc, L2Assoc, L1Cyc, L2Cyc,WrAlloc); // TODO : add c'tor
+	cpu_mem.calc_operation(num, operation);
 	double L1MissRate;
 	double L2MissRate;
 	double avgAccTime;
