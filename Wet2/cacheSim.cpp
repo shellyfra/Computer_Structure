@@ -7,6 +7,8 @@
 #include <vector>
 #include <cmath>
 #include <utility>
+#include<bits/stdc++.h>
+
 
 using std::FILE;
 using std::string;
@@ -27,7 +29,7 @@ public:
     unsigned block_size;
     unsigned num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
-    std::vector< std::vector<std::pair<unsigned, data_status>>> data;
+    std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
     Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
@@ -66,6 +68,7 @@ public:
     unsigned dram_cycles;
     unsigned L1_cycles;
     unsigned L2_cycles;
+    std::vector< std::pair<unsigned, data_status> > LRU;
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
            dram_cycles(MemCyc), L1_cycles(L1Cyc),L2_cycles(L2Cyc), block_size(pow(2,BSize)){ // c'tor
@@ -83,7 +86,10 @@ public:
 
 void Memory::calc_operation(unsigned long int address, char op, double *L1MissRate, double *L2MissRate) {
     unsigned data_location = address % (this->block_size);
-    
+    std::pair <unsigned, data_status> *returned_pair;
+    if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
+        auto itr = std::find (LRU.begin(), LRU.end(), address);
+    }
 }
 
 int main(int argc, char **argv) {
