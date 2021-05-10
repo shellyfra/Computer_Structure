@@ -50,7 +50,6 @@ public:
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) : dram_cycles(MemCyc), L1_cycles(L1Cyc),
                                                                                  L2_cycles(L2Cyc){ // c'tor
-        // TODO : do pow(2, x) for : block_size, cache_size, associatvie
         L1_cache = new Cache(pow(2,L1Size), pow(2, BSize), pow(2,L1Assoc));
         L2_cache = new Cache(pow(2,L2Size), pow(2, BSize), pow(2,L2Assoc));
         cache_policy = WrAlloc ? WRITE_ALLOCATE : NO_WRITE_ALLOCATE;
@@ -60,6 +59,7 @@ public:
         delete L2_cache;
     }
     Memory(Memory& other) = default;
+    void calc_operation(unsigned long int address, char op,	double* L1MissRate, double* L2MissRate);
 };
 
 int main(int argc, char **argv) {
@@ -139,12 +139,12 @@ int main(int argc, char **argv) {
 		cout << " (dec) " << num << endl;
 
 	}
-
+    double L1MissRate = 0;
+    double L2MissRate = 0;
+    double avgAccTime = 0;
 	Memory* cpu_mem = new Memory(MemCyc,BSize, L1Size, L2Size, L1Assoc, L2Assoc, L1Cyc, L2Cyc,WrAlloc );
-	cpu_mem->calc_operation(num, operation);
-	double L1MissRate;
-	double L2MissRate;
-	double avgAccTime;
+	cpu_mem->calc_operation(num, operation, &L1MissRate, &L2MissRate);
+
 
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
