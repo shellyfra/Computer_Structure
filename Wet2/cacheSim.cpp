@@ -23,15 +23,16 @@ typedef enum {DOESNT_EXIST = 0 , EXIST = 1} data_status;
 class Cache {
 public:
     unsigned int size_of_cache;
-    unsigned int block_size;
     unsigned int associative_level;
+    unsigned int block_size;
     unsigned int num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
     std::vector< std::vector<std::pair<unsigned int, data_status>>> data;
     Cache(unsigned int cache_size, unsigned int block_size, unsigned int associative_level): size_of_cache(cache_size),
-                                                                                             block_size(block_size), associative_level(associative_level){
+                                     block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
-        data.resize(num_of_rows, std::vector<std::pair<unsigned int, data_status>>(associative_level,std::make_pair(0,DOESNT_EXIST)));
+        data.resize(num_of_rows, std::vector<std::pair<unsigned int, data_status>>(associative_level,
+                std::make_pair(0,DOESNT_EXIST)));
     }
     ~Cache() = default;
     Cache(Cache& other) = default;
@@ -42,6 +43,7 @@ public:
     Cache* L1_cache;
     Cache* L2_cache;
     policy cache_policy;
+    unsigned int block_size;
     int access_count_L1 = 0;
     int access_count_L2 = 0;
     int access_count_mem = 0;
@@ -49,8 +51,8 @@ public:
     unsigned int L1_cycles;
     unsigned int L2_cycles;
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
-           unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) : dram_cycles(MemCyc), L1_cycles(L1Cyc),
-                                                                                 L2_cycles(L2Cyc){ // c'tor
+           unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
+           dram_cycles(MemCyc), L1_cycles(L1Cyc),L2_cycles(L2Cyc), block_size(pow(2,BSize)){ // c'tor
         L1_cache = new Cache(pow(2,L1Size), pow(2, BSize), pow(2,L1Assoc));
         L2_cache = new Cache(pow(2,L2Size), pow(2, BSize), pow(2,L2Assoc));
         cache_policy = WrAlloc ? WRITE_ALLOCATE : NO_WRITE_ALLOCATE;
@@ -64,7 +66,7 @@ public:
 };
 
 void Memory::calc_operation(unsigned long address, char op, double *L1MissRate, double *L2MissRate) {
-
+    int data_location = address % (this->block_size);
 }
 
 int main(int argc, char **argv) {
