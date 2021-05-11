@@ -21,7 +21,7 @@ using std::stringstream;
 
 typedef enum {NO_WRITE_ALLOCATE, WRITE_ALLOCATE} policy;
 typedef enum {L1, L2} cache_name;
-typedef enum {DOESNT_EXIST = 0 , EXIST = 1} data_status;
+typedef enum {DOESNT_EXIST = 0 , EXIST = 1, DIRTY = 2} data_status;
 
 class Cache {
 public:
@@ -40,7 +40,9 @@ public:
     ~Cache() = default;
     Cache(Cache& other) = default;
     bool in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair);
-    void add(unsigned long int address, unsigned long int LRU_address);
+    bool add(unsigned long int address, unsigned long int LRU_address);
+    void changeToX(unsigned long int address, data_status new_data_status);
+    bool checkIfDirty(unsigned long int address);
 };
 
 bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
@@ -48,7 +50,7 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
-    for (int i = 0; i < this->associative_level ; ++i) {
+    for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if (this->data[set][i].first == tag) {
             *return_pair = this->data[set][i];
             return true;
@@ -57,8 +59,9 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     return_pair = nullptr;
     return false;
 }
-
-void Cache::add(unsigned long address, unsigned long LRU_address) {
+// returns id evacuation is needed
+bool Cache::add(unsigned long address, unsigned long LRU_address) {
+    bool need_evac = false;
     unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag  TODO : check !! if from LRU/regular address
     unsigned long int tag_LRU = LRU_address >> offset_size; // get the upper bits of the address to check with tag
@@ -66,7 +69,10 @@ void Cache::add(unsigned long address, unsigned long LRU_address) {
 
     for (auto &data_address :  this->data[set]){ // cannot have both -> if lru_address == 0 ( does not exist) then will not enter due to data_address.second == EXIST
         // need to replace LRU_address with address
-        if (data_address.first == tag_LRU && data_address.second == EXIST){
+        if (data_address.first == tag_LRU && data_address.second != DOESNT_EXIST){
+            if (data_address.second == DIRTY) { // evacuate from L1
+                need_evac = true;
+            }
             data_address.first = tag;
             data_address.second = EXIST;
             break;
@@ -78,7 +84,32 @@ void Cache::add(unsigned long address, unsigned long LRU_address) {
             break;
         }
     }
+    return need_evac;
 }
+
+void Cache::changeToX(unsigned long address, data_status new_data_status) {
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size;
+    unsigned set = tag%this->num_of_rows;
+    for (unsigned int i = 0; i < this->associative_level ; ++i) {
+        if (this->data[set][i].first == tag) {
+            this->data[set][i].second = new_data_status;
+        }
+    }
+}
+
+bool Cache::checkIfDirty(unsigned long address) {
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size;
+    unsigned set = tag%this->num_of_rows;
+    for (unsigned int i = 0; i < this->associative_level ; ++i) {
+        if (this->data[set][i].first == tag) {
+            return (this->data[set][i].second == DIRTY);
+        }
+    }
+    return false;
+}
+
 
 class Memory {
 public:
@@ -116,24 +147,36 @@ void Memory::calc_operation(unsigned long int address, char op) {
     access_count_L1++; // add the time to access L1 cache
     if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
         //LRU_L1.update(address); // TODO : if exists -> update that its the last used, else -> add to the end of the LRU list
-        //read or write does not matter here because we don't save data
+        if(op == 'w') { // need to specify as dirty
+            L1_cache->changeToX(address, DIRTY);
+        }
     }
     else { // not is L1 cache -> check in L2
         this->miss_count_L1++;
         access_count_L2++;
         if (this->L2_cache->in_cache(data_location, returned_pair) == true) { // in L2
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
-                unsigned long int LRU_address;
-                L1_cache->add(address, LRU_address); // TODO : + get LRU address (use it only if remove is needed) : insert address
+                unsigned long int LRU_address;  // TODO : + get LRU address (use it only if remove is needed) : insert address
+                if (L1_cache->add(address, LRU_address) && L1_cache->checkIfDirty(LRU_address)){ // if need to evict old address
+                    //LRU_L2.update(LRU_address);
+                    //LRU_L1.remove(LRU_address); if needed
+                    L2_cache->changeToX(address, DIRTY); // basically we don't check dirty of L2 so don't need!!
+                }
+                if (op == 'w') {
+                    L1_cache->changeToX(address, DIRTY);
+                }
+                if (op == 'r') {
+                    L1_cache->changeToX(address, EXIST);
+                    L2_cache->changeToX(address, EXIST);
+                }
                 //LRU_L1.update(address);
                 //LRU_L2.update(address);
-                //LRU_L1.remove(LRU_address);
-                //LRU_L2.update(LRU_address);
+
             }
             else { // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
                 access_count_mem++; // update mem with the data
                 //LRU_L2.update(address); // TODO : ask!!
-                //LRU_L2.update(LRU_address);
+                L2_cache->changeToX(address, DIRTY);
             }
         }
         else { // not in L2
@@ -141,14 +184,18 @@ void Memory::calc_operation(unsigned long int address, char op) {
             access_count_mem++;
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
                 unsigned long int LRU_address;
-                L1_cache->add(address, LRU_address); // TODO : + get LRU address
-                L2_cache->add(address, LRU_address); // TODO : + get LRU address
+                if (L1_cache->add(address, LRU_address) && L1_cache->checkIfDirty(LRU_address)){ // if need to evict old address
+                    //LRU_L2.update(LRU_address);
+                    //LRU_L1.remove(LRU_address);
+                }
+                if (L2_cache->add(address, LRU_address)) { // TODO : + get LRU address
+                    //LRU_L2.remove(LRU_address); // check if not in L1 ?????
+                }
                 //LRU_L1.update(address);
                 //LRU_L2.update(address);
-                //LRU_L1.remove(LRU_address);
-                //LRU_L2.remove(LRU_address);
             }
-             //else : go to mem and update the data
+             //else :  // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
+             // go to mem and update the data
              // do not update LRU at all
         }
     }
