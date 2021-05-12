@@ -63,6 +63,7 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
+
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if ((this->data[set][i].first == tag) && (this->data[set][i].second != DOESNT_EXIST)) {
             *return_pair = this->data[set][i];
@@ -226,14 +227,14 @@ public:
         delete L2_cache;
     }
     Memory(Memory& other) = default;
-    void calc_operation(unsigned long int address, char op);
+    void calc_operation(unsigned long int address, const char op);
 };
 
 void Memory::calc_operation(unsigned long int address, char op) {
-    unsigned data_location = address % (this->block_size);
+    //unsigned data_location = address % (this->block_size);
     std::pair <unsigned, data_status> returned_pair;
     access_count_L1++; // add the time to access L1 cache
-    if (this->L1_cache->in_cache(data_location, &returned_pair) == true) {
+    if (this->L1_cache->in_cache(address, &returned_pair) == true) {
         L1_cache->LRUupdate(address);
         if(op == 'w') { // need to specify as dirty
             L1_cache->changeToX(address, DIRTY);
@@ -242,7 +243,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
     else { // not is L1 cache -> check in L2
         this->miss_count_L1++;
         access_count_L2++;
-        if (this->L2_cache->in_cache(data_location, &returned_pair) == true) { // in L2
+        if (this->L2_cache->in_cache(address, &returned_pair) == true) { // in L2
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
                 unsigned* LRU_address;  // TODO : + get LRU address (use it only if remove is needed) : insert address
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
