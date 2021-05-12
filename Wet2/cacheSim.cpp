@@ -37,10 +37,11 @@ public:
     std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
     std::vector< std::vector<unsigned> > LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
 
-    Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(pow(2,10)*cache_size),
-                associative_level(associative_level), block_size(block_size){
-        num_of_rows = size_of_cache /(block_size * associative_level);
-        data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(associative_level,
+    Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(pow(2,cache_size)),
+                associative_level(pow(2,associative_level)), block_size(pow(2,block_size)){
+        unsigned num_of_blocks = size_of_cache / block_size;
+        num_of_rows = num_of_blocks /this->associative_level;
+        data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(this->associative_level,
                 std::make_pair(0,DOESNT_EXIST)));
         LRU_vector.resize(num_of_rows, std::vector<unsigned int>(0, 0));
     }
@@ -63,6 +64,8 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
+    unsigned int num_of_bits_in_set = log2(num_of_rows);
+    tag = tag >> num_of_bits_in_set;
 
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if ((this->data[set][i].first == tag) && (this->data[set][i].second != DOESNT_EXIST)) {
@@ -78,8 +81,10 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
 bool Cache::add(unsigned long address, const unsigned* LRU_address) {
     bool need_evac = false;
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
-    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag  TODO : check !! if from LRU/regular address
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
+    unsigned int num_of_bits_in_set = log2(num_of_rows);
+    tag = tag >> num_of_bits_in_set;
 
     for (auto &data_address :  this->data[set]){ // cannot have both -> if lru_address == 0 ( does not exist) then will not enter due to data_address.second == EXIST
         // need to replace LRU_address with address  todo: add check if LRU exists
@@ -111,8 +116,11 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address) {
  */
 void Cache::changeToX(unsigned long address, data_status new_data_status) {
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
-    unsigned long int tag = address >> offset_size;
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
+    unsigned int num_of_bits_in_set = log2(num_of_rows);
+    tag = tag >> num_of_bits_in_set;
+
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if (this->data[set][i].first == tag) {
             this->data[set][i].second = new_data_status;
@@ -121,9 +129,12 @@ void Cache::changeToX(unsigned long address, data_status new_data_status) {
 }
 
 bool Cache::checkIfDirty(unsigned long address) {
-    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
-    unsigned long int tag = address >> offset_size;
+    unsigned int offset_size = log2(this->block_size);
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
+    unsigned int num_of_bits_in_set = log2(num_of_rows);
+    tag = tag >> num_of_bits_in_set;
+
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if (this->data[set][i].first == tag) {
             return (this->data[set][i].second == DIRTY);
@@ -140,7 +151,8 @@ bool Cache::checkIfDirty(unsigned long address) {
 unsigned* Cache::LRUgetLeastRecentlyUsed(unsigned long address) { //TODO: make sure returns from right end of the vector
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
-    unsigned set = tag % (this->num_of_rows);
+    unsigned set = tag%this->num_of_rows;
+
     if (LRU_vector.at(set).empty()) {
         return nullptr;
     }
@@ -148,9 +160,11 @@ unsigned* Cache::LRUgetLeastRecentlyUsed(unsigned long address) { //TODO: make s
 }
 
 void Cache::LRUremove(unsigned long address) {
+
     unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
-    unsigned set = tag % (this->num_of_rows);
+    unsigned set = tag%this->num_of_rows;
+
     bool exist_in_vector = false;
     auto itr = LRU_vector.at(set).begin();
     for (; itr != LRU_vector.at(set).end() ; ++itr) {
@@ -170,13 +184,16 @@ void Cache::LRUremove(unsigned long address) {
  * @return
  */
 void Cache::LRUupdate(unsigned long address) {
-    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size);
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
-    unsigned set = tag % (this->num_of_rows);
+    unsigned set = tag%this->num_of_rows;
+    unsigned int num_of_bits_in_set = log2(num_of_rows);
+    tag = tag >> num_of_bits_in_set;
+
     bool exist_in_vector = false;
     auto itr = LRU_vector.at(set).begin();
     for (; itr != LRU_vector.at(set).end() ; ++itr) {
-        if (*itr == address) {
+        if (*itr == tag) {
             exist_in_vector = true;
             break;
         }
@@ -193,7 +210,7 @@ void Cache::LRUupdate(unsigned long address) {
     if (exist_in_vector) { //remove from vector
         LRU_vector.at(set).erase(itr);
     }
-    LRU_vector.at(set).push_back(address);
+    LRU_vector.at(set).push_back(tag);
 }
 
 /**
@@ -218,8 +235,8 @@ public:
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
            dram_cycles(MemCyc), L1_cycles(L1Cyc),L2_cycles(L2Cyc), block_size(pow(2,BSize)){ // c'tor
-        L1_cache = new Cache(pow(2,L1Size), pow(2, L1Assoc), pow(2,BSize));
-        L2_cache = new Cache(pow(2,L2Size), pow(2, L2Assoc), pow(2,BSize));
+        L1_cache = new Cache(L1Size, L1Assoc, BSize);
+        L2_cache = new Cache(L2Size, L2Assoc, BSize);
         cache_policy = WrAlloc ? WRITE_ALLOCATE : NO_WRITE_ALLOCATE;
     }
     ~Memory() {
