@@ -378,8 +378,11 @@ int main(int argc, char **argv) {
     double avgAccTime = 0;
 
     avgAccTime = (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/
-            (cpu_mem->access_count_L1 + cpu_mem->access_count_L2 + cpu_mem->access_count_mem);
+            (cpu_mem->access_count_L1);
 
+    L1MissRate = cpu_mem->miss_count_L1/cpu_mem->access_count_L1;
+    L2MissRate = cpu_mem->miss_count_L2/cpu_mem->access_count_L2;
+    
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
 	printf("AccTimeAvg=%.03f\n", avgAccTime);
