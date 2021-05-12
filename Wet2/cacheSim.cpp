@@ -23,6 +23,8 @@ typedef enum {NO_WRITE_ALLOCATE, WRITE_ALLOCATE} policy;
 typedef enum {L1, L2} cache_name;
 typedef enum {DOESNT_EXIST = 0 , EXIST = 1, DIRTY = 2} data_status;
 
+
+
 class Cache {
 public:
     unsigned size_of_cache;
@@ -31,6 +33,8 @@ public:
     unsigned num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
     std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
+    std::vector< std::vector<unsigned> > *LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
+
     Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
@@ -43,6 +47,12 @@ public:
     bool add(unsigned long int address, unsigned long int LRU_address);
     void changeToX(unsigned long int address, data_status new_data_status);
     bool checkIfDirty(unsigned long int address);
+
+    /* LRU functions */
+    // NOTE: back of vector = most used. front of vector = least used
+    unsigned LRUgetLeastRecentlyUsed(unsigned long address);
+    void LRUupdate(unsigned long address);
+    void LRUremove(unsigned long address);
 };
 
 bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
@@ -59,6 +69,7 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
     return_pair = nullptr;
     return false;
 }
+
 // returns id evacuation is needed
 bool Cache::add(unsigned long address, unsigned long LRU_address) {
     bool need_evac = false;
@@ -108,6 +119,64 @@ bool Cache::checkIfDirty(unsigned long address) {
         }
     }
     return false;
+}
+
+/**
+ * returns address of least recently used value
+ * @param address
+ * @return
+ */
+unsigned Cache::LRUgetLeastRecentlyUsed(unsigned long address) {
+    return LRU_vector->at(address).at(0);
+}
+
+void Cache::LRUremove(unsigned long address) {
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
+    unsigned set = tag % (this->num_of_rows);
+    bool exist_in_vector = false;
+    auto itr = LRU_vector->at(set).begin();
+    for (; itr != LRU_vector->at(set).end() ; ++itr) {
+        if (*itr == address) {
+            exist_in_vector = true;
+            break;
+        }
+    }
+    if (exist_in_vector) { //remove from vector
+        LRU_vector->at(set).erase(itr);
+    }
+}
+
+/**
+ * checks if given address exists in LRU table.
+ * @param address
+ * @return
+ */
+void Cache::LRUupdate(unsigned long address) {
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
+    unsigned set = tag % (this->num_of_rows);
+    bool exist_in_vector = false;
+    auto itr = LRU_vector->at(set).begin();
+    for (; itr != LRU_vector->at(set).end() ; ++itr) {
+        if (*itr == address) {
+            exist_in_vector = true;
+            break;
+        }
+    }
+    //this for loop does the same, while using index instead of iterators
+    /*int index;
+    for (index = 0; index < LRU_vector->at(set).size(); ++index) {//search in the relevant line
+        if (LRU_vector->at(set).at(index) == address) {
+            exist_in_vector = true;
+            break;
+        }
+    }*/
+    //now index is the location of the corresponding col.
+    if (exist_in_vector) { //remove from vector
+        LRU_vector->at(set).erase(itr);
+    }
+    LRU_vector->at(set).push_back(address);
 }
 
 
