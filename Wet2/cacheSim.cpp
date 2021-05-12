@@ -50,7 +50,7 @@ public:
 
     /* LRU functions */
     // NOTE: back of vector = most used. front of vector = least used
-    unsigned LRUgetLeastRecentlyUsed(unsigned long address);
+    unsigned* LRUgetLeastRecentlyUsed(unsigned long address);
     void LRUupdate(unsigned long address);
     void LRUremove(unsigned long address);
 };
@@ -126,8 +126,14 @@ bool Cache::checkIfDirty(unsigned long address) {
  * @param address
  * @return
  */
-unsigned Cache::LRUgetLeastRecentlyUsed(unsigned long address) {
-    return LRU_vector.at(address).at(0);
+unsigned* Cache::LRUgetLeastRecentlyUsed(unsigned long address) { //TODO: make sure returns from right end of the vector
+    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
+    unsigned set = tag % (this->num_of_rows);
+    if (LRU_vector.at(set).size() == 0) {
+        return nullptr;
+    }
+    return &(LRU_vector.at(set).at(0));
 }
 
 void Cache::LRUremove(unsigned long address) {
