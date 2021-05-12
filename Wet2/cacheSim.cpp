@@ -231,9 +231,9 @@ public:
 
 void Memory::calc_operation(unsigned long int address, char op) {
     unsigned data_location = address % (this->block_size);
-    std::pair <unsigned, data_status> *returned_pair = nullptr;
+    std::pair <unsigned, data_status> returned_pair;
     access_count_L1++; // add the time to access L1 cache
-    if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
+    if (this->L1_cache->in_cache(data_location, &returned_pair) == true) {
         L1_cache->LRUupdate(address);
         if(op == 'w') { // need to specify as dirty
             L1_cache->changeToX(address, DIRTY);
@@ -242,7 +242,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
     else { // not is L1 cache -> check in L2
         this->miss_count_L1++;
         access_count_L2++;
-        if (this->L2_cache->in_cache(data_location, returned_pair) == true) { // in L2
+        if (this->L2_cache->in_cache(data_location, &returned_pair) == true) { // in L2
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
                 unsigned* LRU_address;  // TODO : + get LRU address (use it only if remove is needed) : insert address
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
@@ -273,10 +273,6 @@ void Memory::calc_operation(unsigned long int address, char op) {
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
                 unsigned* LRU_address;
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
-                if (LRU_address == nullptr){
-                    //meaning that there's nothing in the LRU - no data was updated in the given line
-                    //TODO: return a random address from the line?
-                }
                 if (L1_cache->add(address, LRU_address) && ((LRU_address != nullptr) && L1_cache->checkIfDirty(*LRU_address)) ){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address);
                     L1_cache->LRUremove(*LRU_address);
@@ -296,7 +292,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
 }
 
 int main(int argc, char **argv) {
-
+    std::cout << "number of arguments: " << argc << std::endl;
 	if (argc < 19) {
 		cerr << "Not enough arguments" << endl;
 		return 0;
@@ -380,10 +376,17 @@ int main(int argc, char **argv) {
     avgAccTime = (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/
             (cpu_mem->access_count_L1);
 
-    L1MissRate = cpu_mem->miss_count_L1/cpu_mem->access_count_L1;
-    L2MissRate = cpu_mem->miss_count_L2/cpu_mem->access_count_L2;
-    
-	printf("L1miss=%.03f ", L1MissRate);
+    if (cpu_mem->access_count_L1 != 0) {
+        L1MissRate = cpu_mem->miss_count_L1 / cpu_mem->access_count_L1;
+    }
+    std::cout << "L1 Miss rate: " << L1MissRate << std::endl;
+
+    if (cpu_mem->access_count_L2 != 0){
+        L2MissRate = cpu_mem->miss_count_L2 / cpu_mem->access_count_L2;
+    }
+    std::cout << "L2 Miss rate: " << L2MissRate << std::endl;
+
+    printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
 	printf("AccTimeAvg=%.03f\n", avgAccTime);
 
