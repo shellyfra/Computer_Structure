@@ -38,7 +38,7 @@ public:
     std::vector< std::vector<unsigned> > LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
 
     Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(cache_size),
-                                     block_size(block_size), associative_level(associative_level){
+                associative_level(associative_level), block_size(block_size){
         num_of_rows = size_of_cache /(block_size * associative_level);
         data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(associative_level,
                 std::make_pair(0,DOESNT_EXIST)));
