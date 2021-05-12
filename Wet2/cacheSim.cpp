@@ -24,7 +24,9 @@ typedef enum {L1, L2} cache_name;
 typedef enum {DOESNT_EXIST = 0 , EXIST = 1, DIRTY = 2} data_status;
 
 
-
+/**
+ * the following class simulates how the work of a cache
+ */
 class Cache {
 public:
     unsigned size_of_cache;
@@ -35,7 +37,7 @@ public:
     std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
     std::vector< std::vector<unsigned> > LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
 
-    Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
+    Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
         num_of_rows = size_of_cache /(block_size * associative_level);
         data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(associative_level,
@@ -101,6 +103,11 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address) {
     return need_evac;
 }
 
+/**
+ * function changes the status of a given adress to the given status (Exist, doesnt_exist or dirty)
+ * @param address
+ * @param new_data_status
+ */
 void Cache::changeToX(unsigned long address, data_status new_data_status) {
     unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size;
@@ -188,7 +195,10 @@ void Cache::LRUupdate(unsigned long address) {
     LRU_vector.at(set).push_back(address);
 }
 
-
+/**
+ * this class manages the interaction with the memory.
+ * it contains two field of class 'Cache', each one represents a cache.
+ */
 class Memory {
 public:
     Cache* L1_cache;
@@ -221,7 +231,7 @@ public:
 
 void Memory::calc_operation(unsigned long int address, char op) {
     unsigned data_location = address % (this->block_size);
-    std::pair <unsigned, data_status> *returned_pair;
+    std::pair <unsigned, data_status> *returned_pair = nullptr;
     access_count_L1++; // add the time to access L1 cache
     if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
         L1_cache->LRUupdate(address);
@@ -263,12 +273,17 @@ void Memory::calc_operation(unsigned long int address, char op) {
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
                 unsigned* LRU_address;
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
+                if (LRU_address == nullptr){
+                    //meaning that there's nothing in the LRU - no data was updated in the given line
+                    //TODO: return a random address from the line?
+                }
                 if (L1_cache->add(address, LRU_address) && ((LRU_address != nullptr) && L1_cache->checkIfDirty(*LRU_address)) ){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address);
                     L1_cache->LRUremove(*LRU_address);
                 }
                 if (L2_cache->add(address, LRU_address)) { // TODO : + get LRU address
                     L2_cache->LRUremove(*LRU_address); // check if not in L1 ?????
+                    //L1_cache->LRUremove(*LRU_address); //TODO: make sure it is removed when reaching here
                 }
                 L1_cache->LRUupdate(address);
                 L2_cache->LRUupdate(address);
