@@ -33,7 +33,7 @@ public:
     unsigned num_of_rows; // size_of_cache /(block_size * associative_level)
     int access_count = 0;
     std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
-    std::vector< std::vector<unsigned> > *LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
+    std::vector< std::vector<unsigned> > LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
 
     Cache(unsigned cache_size, unsigned block_size, unsigned associative_level): size_of_cache(cache_size),
                                      block_size(block_size), associative_level(associative_level){
@@ -127,7 +127,7 @@ bool Cache::checkIfDirty(unsigned long address) {
  * @return
  */
 unsigned Cache::LRUgetLeastRecentlyUsed(unsigned long address) {
-    return LRU_vector->at(address).at(0);
+    return LRU_vector.at(address).at(0);
 }
 
 void Cache::LRUremove(unsigned long address) {
@@ -135,15 +135,15 @@ void Cache::LRUremove(unsigned long address) {
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag % (this->num_of_rows);
     bool exist_in_vector = false;
-    auto itr = LRU_vector->at(set).begin();
-    for (; itr != LRU_vector->at(set).end() ; ++itr) {
+    auto itr = LRU_vector.at(set).begin();
+    for (; itr != LRU_vector.at(set).end() ; ++itr) {
         if (*itr == address) {
             exist_in_vector = true;
             break;
         }
     }
     if (exist_in_vector) { //remove from vector
-        LRU_vector->at(set).erase(itr);
+        LRU_vector.at(set).erase(itr);
     }
 }
 
@@ -157,8 +157,8 @@ void Cache::LRUupdate(unsigned long address) {
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag % (this->num_of_rows);
     bool exist_in_vector = false;
-    auto itr = LRU_vector->at(set).begin();
-    for (; itr != LRU_vector->at(set).end() ; ++itr) {
+    auto itr = LRU_vector.at(set).begin();
+    for (; itr != LRU_vector.at(set).end() ; ++itr) {
         if (*itr == address) {
             exist_in_vector = true;
             break;
@@ -174,9 +174,9 @@ void Cache::LRUupdate(unsigned long address) {
     }*/
     //now index is the location of the corresponding col.
     if (exist_in_vector) { //remove from vector
-        LRU_vector->at(set).erase(itr);
+        LRU_vector.at(set).erase(itr);
     }
-    LRU_vector->at(set).push_back(address);
+    LRU_vector.at(set).push_back(address);
 }
 
 
