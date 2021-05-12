@@ -37,7 +37,7 @@ public:
     std::vector< std::vector<std::pair<unsigned, data_status>>> data; //pair : tag, status
     std::vector< std::vector<unsigned> > LRU_vector; //each vector represents a line of cache. each inner vector represents a cell (depends on associative level)
 
-    Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(cache_size),
+    Cache(unsigned cache_size, unsigned associative_level, unsigned block_size): size_of_cache(pow(2,10)*cache_size),
                 associative_level(associative_level), block_size(block_size){
         num_of_rows = size_of_cache /(block_size * associative_level);
         data.resize(num_of_rows, std::vector<std::pair<unsigned, data_status>>(associative_level,
@@ -60,11 +60,11 @@ public:
 
 bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
     if (return_pair == nullptr) return false;
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag%this->num_of_rows;
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
-        if (this->data[set][i].first == tag) {
+        if ((this->data[set][i].first == tag) && (this->data[set][i].second != DOESNT_EXIST)) {
             *return_pair = this->data[set][i];
             return true;
         }
@@ -76,7 +76,7 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
 // returns id evacuation is needed
 bool Cache::add(unsigned long address, const unsigned* LRU_address) {
     bool need_evac = false;
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag  TODO : check !! if from LRU/regular address
     unsigned set = tag%this->num_of_rows;
 
@@ -109,7 +109,7 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address) {
  * @param new_data_status
  */
 void Cache::changeToX(unsigned long address, data_status new_data_status) {
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size;
     unsigned set = tag%this->num_of_rows;
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
@@ -120,7 +120,7 @@ void Cache::changeToX(unsigned long address, data_status new_data_status) {
 }
 
 bool Cache::checkIfDirty(unsigned long address) {
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size;
     unsigned set = tag%this->num_of_rows;
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
@@ -137,7 +137,7 @@ bool Cache::checkIfDirty(unsigned long address) {
  * @return
  */
 unsigned* Cache::LRUgetLeastRecentlyUsed(unsigned long address) { //TODO: make sure returns from right end of the vector
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag % (this->num_of_rows);
     if (LRU_vector.at(set).empty()) {
@@ -147,7 +147,7 @@ unsigned* Cache::LRUgetLeastRecentlyUsed(unsigned long address) { //TODO: make s
 }
 
 void Cache::LRUremove(unsigned long address) {
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag % (this->num_of_rows);
     bool exist_in_vector = false;
@@ -169,7 +169,7 @@ void Cache::LRUremove(unsigned long address) {
  * @return
  */
 void Cache::LRUupdate(unsigned long address) {
-    unsigned int offset_size = log2(this->block_size*8); // 8 is the num of bits in byte
+    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
     unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
     unsigned set = tag % (this->num_of_rows);
     bool exist_in_vector = false;
@@ -217,8 +217,8 @@ public:
     Memory(unsigned MemCyc,unsigned BSize, unsigned L1Size, unsigned L2Size, unsigned L1Assoc,
            unsigned L2Assoc, unsigned L1Cyc, unsigned L2Cyc, unsigned WrAlloc) :
            dram_cycles(MemCyc), L1_cycles(L1Cyc),L2_cycles(L2Cyc), block_size(pow(2,BSize)){ // c'tor
-        L1_cache = new Cache(pow(2,L1Size), pow(2, BSize), pow(2,L1Assoc));
-        L2_cache = new Cache(pow(2,L2Size), pow(2, BSize), pow(2,L2Assoc));
+        L1_cache = new Cache(pow(2,L1Size), pow(2, L1Assoc), pow(2,BSize));
+        L2_cache = new Cache(pow(2,L2Size), pow(2, L2Assoc), pow(2,BSize));
         cache_policy = WrAlloc ? WRITE_ALLOCATE : NO_WRITE_ALLOCATE;
     }
     ~Memory() {
@@ -231,9 +231,9 @@ public:
 
 void Memory::calc_operation(unsigned long int address, char op) {
     unsigned data_location = address % (this->block_size);
-    std::pair <unsigned, data_status> *returned_pair = nullptr;
+    std::pair <unsigned, data_status> returned_pair;
     access_count_L1++; // add the time to access L1 cache
-    if (this->L1_cache->in_cache(data_location, returned_pair) == true) {
+    if (this->L1_cache->in_cache(data_location, &returned_pair) == true) {
         L1_cache->LRUupdate(address);
         if(op == 'w') { // need to specify as dirty
             L1_cache->changeToX(address, DIRTY);
@@ -242,7 +242,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
     else { // not is L1 cache -> check in L2
         this->miss_count_L1++;
         access_count_L2++;
-        if (this->L2_cache->in_cache(data_location, returned_pair) == true) { // in L2
+        if (this->L2_cache->in_cache(data_location, &returned_pair) == true) { // in L2
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
                 unsigned* LRU_address;  // TODO : + get LRU address (use it only if remove is needed) : insert address
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
@@ -382,7 +382,7 @@ int main(int argc, char **argv) {
 
     L1MissRate = cpu_mem->miss_count_L1/cpu_mem->access_count_L1;
     L2MissRate = cpu_mem->miss_count_L2/cpu_mem->access_count_L2;
-    
+
 	printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
 	printf("AccTimeAvg=%.03f\n", avgAccTime);
