@@ -80,13 +80,13 @@ bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>
         unsigned int offset_size = log2(this->block_size);
         tag = address >> offset_size; // get the upper bits of the address to check with tag
         set = tag%this->num_of_rows;
+        unsigned int num_of_bits_in_set = log2(num_of_rows);
+        tag = tag >> num_of_bits_in_set;
     }
     else {
         set = address%this->num_of_rows;
         tag = address;
     }
-    unsigned int num_of_bits_in_set = log2(num_of_rows);
-    tag = tag >> num_of_bits_in_set;
 
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if ((this->data[set][i].first == tag) && (this->data[set][i].second != DOESNT_EXIST)) {
@@ -222,14 +222,15 @@ void Cache::LRUupdate(unsigned long address, bool is_address) {
         unsigned int offset_size = log2(this->block_size);
         tag = address >> offset_size; // get the upper bits of the address to check with tag
         set = tag%this->num_of_rows;
+        //unsigned int num_of_bits_in_set = log2(num_of_rows);
+        //tag = tag >> num_of_bits_in_set; //todo : check with other functions that its ok!!!!!
+
 
     }
     else {
         set = address%this->num_of_rows;
         tag = address;
     }
-    unsigned int num_of_bits_in_set = log2(num_of_rows);
-    tag = tag >> num_of_bits_in_set; //todo : check with other functions that its ok!!!!!
 
     //bool exist_in_vector = false;
     auto itr = LRU_vector.at(set).begin();
