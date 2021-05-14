@@ -52,11 +52,11 @@ public:
 
     Cache(Cache &other) = default;
 
-    bool in_cache(unsigned long int address, std::pair<unsigned, data_status> *return_pair);
+    bool in_cache(unsigned long int address, std::pair<unsigned, data_status> *return_pair, bool is_tag);
 
     bool add(unsigned long int address, const unsigned *LRU_address, bool L1);
 
-    void changeToX(unsigned long int address, data_status new_data_status);
+    void changeToX(unsigned long int address, data_status new_data_status, bool is_address);
 
     bool checkIfDirty(unsigned long int address);
 
@@ -71,13 +71,22 @@ public:
     void LRUprint();
 };
 
-bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair) {
+bool Cache::in_cache(unsigned long int address, std::pair<unsigned, data_status>* return_pair, bool is_tag = false) {
     if (return_pair == nullptr) return false;
-    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
-    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
-    unsigned set = tag%this->num_of_rows;
-    unsigned int num_of_bits_in_set = log2(num_of_rows);
-    tag = tag >> num_of_bits_in_set;
+
+    unsigned long int tag ; // get the upper bits of the address to check with tag
+    unsigned set;
+    if (!is_tag) {
+        unsigned int offset_size = log2(this->block_size);
+        tag = address >> offset_size; // get the upper bits of the address to check with tag
+        set = tag%this->num_of_rows;
+        unsigned int num_of_bits_in_set = log2(num_of_rows);
+        tag = tag >> num_of_bits_in_set;
+    }
+    else {
+        set = address%this->num_of_rows;
+        tag = address;
+    }
 
     for (unsigned int i = 0; i < this->associative_level ; ++i) {
         if ((this->data[set][i].first == tag) && (this->data[set][i].second != DOESNT_EXIST)) {
@@ -99,7 +108,6 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address, bool L1 = tr
     unsigned int num_of_bits_in_set = log2(num_of_rows);
     tag = tag >> num_of_bits_in_set;
 
-
     std::pair<unsigned int, data_status> pair_of_LRU;
 
     for (auto& data_address :  this->data[set]) { // cannot have both -> if lru_address == 0 ( does not exist) then will not enter due to data_address.second == EXIST
@@ -114,8 +122,9 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address, bool L1 = tr
         }
     }
     if(need_to_replace_LRU_address && LRU_address != nullptr) { // free location not found -> need to replace with LRU_address
+        unsigned long int LRU_address_tag = *LRU_address >> num_of_bits_in_set;
         for (auto &data_address :  this->data[set]) {
-            if (data_address.first == *LRU_address && data_address.second != DOESNT_EXIST) {
+            if (data_address.first == LRU_address_tag && data_address.second != DOESNT_EXIST) {
                 need_evac = (data_address.second == DIRTY) || (!L1 &&data_address.second != DOESNT_EXIST);
                 data_address.first = tag;
                 data_address.second = EXIST;
@@ -132,10 +141,16 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address, bool L1 = tr
  * @param address
  * @param new_data_status
  */
-void Cache::changeToX(unsigned long address, data_status new_data_status) {
-    unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
-    unsigned long int tag = address >> offset_size; // get the upper bits of the address to check with tag
-    unsigned set = tag%this->num_of_rows;
+void Cache::changeToX(unsigned long address, data_status new_data_status, bool is_address = true) {
+    unsigned long int tag;
+    unsigned set;
+    if (is_address) {
+        unsigned int offset_size = log2(this->block_size); // 8 is the num of bits in byte
+        tag = address >> offset_size; // get the upper bits of the address to check with tag
+        set = tag%this->num_of_rows;
+    } else {
+        tag = address;
+    }
     unsigned int num_of_bits_in_set = log2(num_of_rows);
     tag = tag >> num_of_bits_in_set;
 
@@ -206,15 +221,13 @@ void Cache::LRUupdate(unsigned long address, bool is_address) {
         unsigned int offset_size = log2(this->block_size);
         tag = address >> offset_size; // get the upper bits of the address to check with tag
         set = tag%this->num_of_rows;
-        unsigned int num_of_bits_in_set = log2(num_of_rows);
-        tag = tag >> num_of_bits_in_set;
+        //unsigned int num_of_bits_in_set = log2(num_of_rows);
+        //tag = tag >> num_of_bits_in_set; todo : check with other functions that its ok!!!!!
     }
     else {
         set = address%this->num_of_rows;
         tag = address;
     }
-//    unsigned int num_of_bits_in_set = log2(num_of_rows);
-//    tag = tag >> num_of_bits_in_set;
 
     //bool exist_in_vector = false;
     auto itr = LRU_vector.at(set).begin();
@@ -330,13 +343,13 @@ void Memory::calc_operation(unsigned long int address, char op) {
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
                 unsigned* LRU_address;
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
-                if (L1_cache->add(address, LRU_address) && ((LRU_address != nullptr))){ // if need to evict old address
+                if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
                     //L1_cache->LRUremove(*LRU_address);
                 }
-                if (L2_cache->add(address, LRU_address, false)) { // TODO : + get LRU address
-                    if (L1_cache->in_cache(address,&returned_pair )) {
-                        L1_cache->changeToX(*LRU_address, DOESNT_EXIST);
+                if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // TODO : + get LRU address
+                    if (L1_cache->in_cache(*LRU_address,&returned_pair, false )) {
+                        L1_cache->changeToX(*LRU_address, DOESNT_EXIST, false);
                         L1_cache->LRUremove(*LRU_address);
                     }
                 }
