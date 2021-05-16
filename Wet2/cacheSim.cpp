@@ -337,7 +337,6 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 L2_cache->LRUupdate(address, true);
             }
             else { // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
-                access_count_mem++; // update mem with the data
                 L2_cache->LRUupdate(address, true);
                 L2_cache->changeToX(address, DIRTY);
             }
@@ -368,10 +367,10 @@ void Memory::calc_operation(unsigned long int address, char op) {
              // do not update LRU at all
         }
     }
-    cout << "L1 cache : " << endl;
+    /*cout << "L1 cache : " << endl;
     L1_cache->LRUprint();
     cout << "L2 cache : " << endl;
-    L2_cache->LRUprint();
+    L2_cache->LRUprint();*/
 
 }
 
@@ -438,27 +437,29 @@ int main(int argc, char **argv) {
 			return 0;
 		}
 
+
 		// DEBUG - remove this line
-		cout << "operation: " << operation;
+		//cout << "operation: " << operation;
 
 		string cutAddress = address.substr(2); // Removing the "0x" part of the address
 
 		// DEBUG - remove this line
-		cout << ", address (hex)" << cutAddress;
+		//cout << ", address (hex)" << cutAddress;
 
 
 		num = strtoul(cutAddress.c_str(), NULL, 16);
 
 		// DEBUG - remove this line
-		cout << " (dec) " << num << endl;
+		//cout << " (dec) " << num << endl;
+
         cpu_mem->calc_operation(num, operation);
 	}
     double L1MissRate = 0;
     double L2MissRate = 0;
     double avgAccTime = 0;
 
-    avgAccTime = double (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/
-            double (cpu_mem->access_count_L1);
+    avgAccTime = double (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles
+            +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/double (cpu_mem->access_count_L1);
 
     if (cpu_mem->access_count_L1 != 0) {
         L1MissRate = double(cpu_mem->miss_count_L1) / double(cpu_mem->access_count_L1);
