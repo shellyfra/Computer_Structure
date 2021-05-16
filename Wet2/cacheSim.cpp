@@ -350,7 +350,6 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
                 if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
-                    //L1_cache->LRUremove(*LRU_address); // TODO Need to add ????????????????????
                 }
                 if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // TODO : + get LRU address
                     if (L1_cache->in_cache(*LRU_address,&returned_pair, false )) {
@@ -377,7 +376,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
 }
 
 int main(int argc, char **argv) {
-    std::cout << "number of arguments: " << argc << std::endl;
+    //std::cout << "number of arguments: " << argc << std::endl;
 	if (argc < 19) {
 		cerr << "Not enough arguments" << endl;
 		return 0;
@@ -464,12 +463,12 @@ int main(int argc, char **argv) {
     if (cpu_mem->access_count_L1 != 0) {
         L1MissRate = double(cpu_mem->miss_count_L1) / double(cpu_mem->access_count_L1);
     }
-    std::cout << "L1 Miss rate: " << L1MissRate << std::endl;
+    //std::cout << "L1 Miss rate: " << L1MissRate << std::endl;
 
     if (cpu_mem->access_count_L2 != 0){
         L2MissRate = double(cpu_mem->miss_count_L2) / double(cpu_mem->access_count_L2);
     }
-    std::cout << "L2 Miss rate: " << L2MissRate << std::endl;
+    //std::cout << "L2 Miss rate: " << L2MissRate << std::endl;
 
     printf("L1miss=%.03f ", L1MissRate);
 	printf("L2miss=%.03f ", L2MissRate);
