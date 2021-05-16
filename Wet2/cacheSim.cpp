@@ -256,11 +256,13 @@ void Cache::LRUupdate(unsigned long address, bool is_address) {
 void Cache::LRUprint() {
 
     for (unsigned int i = 0; i <LRU_vector.size() ; ++i) {
-        cout << "set " << i << ":";
-        if (LRU_vector[i].empty()){
+
+        if (!LRU_vector[i].empty()){
+            cout << "set " << i << ":";
             cout << endl;
-            continue;
-        }
+
+        } else continue;
+
         for (unsigned int j = 0; j <LRU_vector[i].size() ; ++j) {
             cout << "   " << LRU_vector[i][j];
         }
@@ -348,7 +350,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
                 if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
-                    //L1_cache->LRUremove(*LRU_address);
+                    //L1_cache->LRUremove(*LRU_address); // TODO Need to add ????????????????????
                 }
                 if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // TODO : + get LRU address
                     if (L1_cache->in_cache(*LRU_address,&returned_pair, false )) {
@@ -357,6 +359,9 @@ void Memory::calc_operation(unsigned long int address, char op) {
                     }
                 }
                 L1_cache->LRUupdate(address, true);
+                if (op == 'w') { // modify L1 cache
+                    L1_cache->changeToX(address, DIRTY);
+                }
                 L2_cache->LRUupdate(address, true);
             }
              //else :  // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
