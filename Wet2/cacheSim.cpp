@@ -321,9 +321,11 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
                 if (L1_cache->add(address, LRU_address) &&  (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
-                    delete LRU_address;
                     //L1_cache->LRUremove(*LRU_address);
                     L2_cache->changeToX(address, DIRTY); // basically we don't check dirty of L2 so don't need!!
+                }
+                if (LRU_address != nullptr) {
+                    delete LRU_address; // delete old L1 adress
                 }
                 if (op == 'w') {
                     L1_cache->changeToX(address, DIRTY);
@@ -349,6 +351,9 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address); // allocate new address
                 if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
+
+                }
+                if (LRU_address != nullptr) {
                     delete LRU_address; // delete old L1 adress
                 }
                 LRU_address = L2_cache->LRUgetLeastRecentlyUsed(address);// allocate new address
@@ -356,8 +361,10 @@ void Memory::calc_operation(unsigned long int address, char op) {
                     if (L1_cache->in_cache(*LRU_address,&returned_pair, true )) {
                         L1_cache->changeToX(*LRU_address, DOESNT_EXIST, false);
                         L1_cache->LRUremove(*LRU_address);
-                        delete LRU_address;
                     }
+                }
+                if (LRU_address != nullptr) {
+                    delete LRU_address; // delete old L2 adress
                 }
                 L1_cache->LRUupdate(address, true);
                 if (op == 'w') { // modify L1 cache
