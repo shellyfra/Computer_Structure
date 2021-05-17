@@ -125,7 +125,7 @@ bool Cache::add(unsigned long address, const unsigned* LRU_address, bool L1 = tr
         unsigned long int LRU_address_tag = *LRU_address >> num_of_bits_in_set;
         for (auto &data_address :  this->data[set]) {
             if (data_address.first == LRU_address_tag && data_address.second != DOESNT_EXIST) {
-                need_evac = (data_address.second == DIRTY) || (!L1 &&data_address.second != DOESNT_EXIST);
+                need_evac = (data_address.second == DIRTY) || (!L1 && data_address.second != DOESNT_EXIST);
                 data_address.first = tag;
                 data_address.second = EXIST;
                 LRUremove(*LRU_address);
@@ -350,8 +350,9 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
                     L2_cache->LRUupdate(*LRU_address, false);
                 }
-                if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // TODO : + get LRU address
-                    if (L1_cache->in_cache(*LRU_address,&returned_pair, false )) {
+                LRU_address = L2_cache->LRUgetLeastRecentlyUsed(address);
+                if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // if need to remove LRU address
+                    if (L1_cache->in_cache(*LRU_address,&returned_pair, true )) {
                         L1_cache->changeToX(*LRU_address, DOESNT_EXIST, false);
                         L1_cache->LRUremove(*LRU_address);
                     }
@@ -426,6 +427,9 @@ int main(int argc, char **argv) {
     char operation = 0; // read (R) or write (W)
     unsigned long int num = 0;
     auto cpu_mem = new Memory(MemCyc,BSize, L1Size, L2Size, L1Assoc, L2Assoc, L1Cyc, L2Cyc,WrAlloc );
+    double L1MissRate = 0;
+    double L2MissRate = 0;
+    double avgAccTime = 0;
 
 	while (getline(file, line)) {
 
@@ -454,9 +458,6 @@ int main(int argc, char **argv) {
 
         cpu_mem->calc_operation(num, operation);
 	}
-    double L1MissRate = 0;
-    double L2MissRate = 0;
-    double avgAccTime = 0;
 
     avgAccTime = double (cpu_mem->access_count_L1*cpu_mem->L1_cycles + cpu_mem->access_count_L2*cpu_mem->L2_cycles
             +cpu_mem->access_count_mem*cpu_mem->dram_cycles)/double (cpu_mem->access_count_L1);
