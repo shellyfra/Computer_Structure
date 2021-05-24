@@ -223,7 +223,7 @@ void Cache::LRUupdate(unsigned long address, bool is_address) {
         tag = address >> offset_size; // get the upper bits of the address to check with tag
         set = tag%this->num_of_rows;
         //unsigned int num_of_bits_in_set = log2(num_of_rows);
-        //tag = tag >> num_of_bits_in_set; //todo : check with other functions that its ok!!!!!
+        //tag = tag >> num_of_bits_in_set;
     }
     else {
         set = address%this->num_of_rows;
@@ -262,7 +262,7 @@ void Cache::LRUprint() {
         } else continue;
 
         for (unsigned int j = 0; j <LRU_vector[i].size() ; ++j) {
-            cout << "   " << LRU_vector[i][j];
+            cout << "    0x" << std::hex << LRU_vector[i][j];
         }
         cout << endl;
     }
@@ -317,12 +317,16 @@ void Memory::calc_operation(unsigned long int address, char op) {
         access_count_L2++;
         if (this->L2_cache->in_cache(address, &returned_pair) == true) { // in L2
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1
-                unsigned* LRU_address;  // TODO : + get LRU address (use it only if remove is needed) : insert address
+                unsigned* LRU_address;
                 LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address);
-                if (L1_cache->add(address, LRU_address) &&  (LRU_address != nullptr)){ // if need to evict old address
+                if (L1_cache->add(address, LRU_address) &&  (LRU_address != nullptr)){ // if need to evict old address the remove is in add
+                    L2_cache->LRUupdate(address, true);
                     L2_cache->LRUupdate(*LRU_address, false);
                     //L1_cache->LRUremove(*LRU_address);
                     L2_cache->changeToX(address, DIRTY); // basically we don't check dirty of L2 so don't need!!
+                }
+                else {
+                    L2_cache->LRUupdate(address, true);
                 }
                 if (LRU_address != nullptr) {
                     delete LRU_address; // delete old L1 adress
@@ -335,8 +339,6 @@ void Memory::calc_operation(unsigned long int address, char op) {
                     L2_cache->changeToX(address, EXIST);
                 }
                 L1_cache->LRUupdate(address, true);
-                L2_cache->LRUupdate(address, true);
-
             }
             else { // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
                 L2_cache->LRUupdate(address, true);
@@ -348,14 +350,7 @@ void Memory::calc_operation(unsigned long int address, char op) {
             access_count_mem++;
             if (((op == 'w') && (this->cache_policy == WRITE_ALLOCATE)) || op == 'r'){ // need to add address to L1 and L2
                 unsigned* LRU_address;
-                LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address); // allocate new address
-                if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
-                    L2_cache->LRUupdate(*LRU_address, false);
-
-                }
-                if (LRU_address != nullptr) {
-                    delete LRU_address; // delete old L1 adress
-                }
+                //////////////////////// search in L2 ///////////////////////////
                 LRU_address = L2_cache->LRUgetLeastRecentlyUsed(address);// allocate new address
                 if (L2_cache->add(address, LRU_address, false) && (LRU_address != nullptr)) { // if need to remove LRU address
                     if (L1_cache->in_cache(*LRU_address,&returned_pair, true )) {
@@ -366,12 +361,20 @@ void Memory::calc_operation(unsigned long int address, char op) {
                 if (LRU_address != nullptr) {
                     delete LRU_address; // delete old L2 adress
                 }
+                L2_cache->LRUupdate(address, true);
+                //////////////////////// search in L1 ///////////////////////////
+                LRU_address = L1_cache->LRUgetLeastRecentlyUsed(address); // allocate new address
+                if (L1_cache->add(address, LRU_address) && (LRU_address != nullptr)){ // if need to evict old address
+                    L2_cache->LRUupdate(*LRU_address, false);
+
+                }
+                if (LRU_address != nullptr) {
+                    delete LRU_address; // delete old L1 adress
+                }
                 L1_cache->LRUupdate(address, true);
                 if (op == 'w') { // modify L1 cache
                     L1_cache->changeToX(address, DIRTY);
                 }
-                L2_cache->LRUupdate(address, true);
-
             }
              //else :  // ((op == 'w') && (this->cache_policy == NO_WRITE_ALLOCATE))
              // go to mem and update the data
