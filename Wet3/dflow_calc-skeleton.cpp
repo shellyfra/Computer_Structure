@@ -38,7 +38,12 @@ public:
     //std::vector <Node*> exit; TODO: maybe add back. check if register_array is sufficient
     unsigned int op_latency[];
 
-    ~OOOExe() = default;
+    ~OOOExe(){
+        for (int i = 0; i < inst_array.size(); ++i) {
+            delete inst_array.at(i); //TODO: check if it works.
+            inst_array.at(i) = nullptr;
+        }
+    }
     OOOExe(OOOExe& other) = default;
 };
 
