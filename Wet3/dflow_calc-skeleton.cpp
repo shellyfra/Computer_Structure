@@ -25,6 +25,9 @@ public:
             command[SRC1] = src1;
             command[SRC2] = src2;
         }
+
+    ~Node() = default;
+    Node (Node& other_node) = default;
 };
 
 
@@ -35,6 +38,8 @@ public:
     //std::vector <Node*> exit; TODO: maybe add back. check if register_array is sufficient
     unsigned int op_latency[];
 
+    ~OOOExe() = default;
+    OOOExe(OOOExe& other) = default;
 };
 
 
