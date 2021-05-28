@@ -134,7 +134,7 @@ int getProgDepth(ProgCtx ctx) {
     }
     OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
     unsigned int max = 0;
-    for (int i = 0; i < out_of_order->inst_array.size(); ++i) {
+    for (unsigned int i = 0; i < out_of_order->inst_array.size(); ++i) {
         if (out_of_order->inst_array.at(i)->delay > max) {
             max = out_of_order->inst_array.at(i)->delay;
         }
