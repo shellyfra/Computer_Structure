@@ -108,12 +108,13 @@ int getInstDepth(ProgCtx ctx, unsigned int theInst) {
         return -1;
     }
     OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
-    if ((theInst > out_of_order->num_of_insts) || (theInst < 0)) return -1;
+    if ((theInst > out_of_order->num_of_insts) || (theInst < 0)) {
+        return -1;
+    }
 
     int inclusive_delay = out_of_order->inst_array[theInst]->delay;
     //return the total delay minus the instruction delay
     return inclusive_delay - out_of_order->inst_array[theInst]->original_delay;
-
 }
 
 int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2DepInst) {
@@ -128,7 +129,17 @@ int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2De
 }
 
 int getProgDepth(ProgCtx ctx) {
-    return 0;
+    if (ctx == nullptr){
+        return -1;
+    }
+    OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
+    unsigned int max = 0;
+    for (int i = 0; i < out_of_order->inst_array.size(); ++i) {
+        if (out_of_order->inst_array.at(i)->delay > max) {
+            max = out_of_order->inst_array.at(i)->delay;
+        }
+    }
+    return max;
 }
 
 
