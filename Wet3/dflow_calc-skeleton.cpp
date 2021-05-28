@@ -3,6 +3,7 @@
 
 #include "dflow_calc.h"
 #include <vector>
+#include <algorithm>
 #define OPCODE 0
 #define DST 1
 #define SRC1 2
@@ -69,20 +70,26 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
         OOOExe *out_of_order = new OOOExe(opsLatency, progTrace, numOfInsts );
         //now we will calculate the dependencies :)
         for (unsigned int i = 0; i < numOfInsts; ++i) {
-            Node *new_inst = new Node(opsLatency[i], progTrace[i].opcode, progTrace[i].dstIdx, progTrace[i].src1Idx,
+            Node *new_inst = new Node(opsLatency[progTrace[i].opcode], progTrace[i].opcode, progTrace[i].dstIdx, progTrace[i].src1Idx,
                                       progTrace[i].src2Idx, i);
             out_of_order->inst_array.push_back(new_inst);
             Node *src1 = out_of_order->register_array[progTrace[i].src1Idx];
             Node *src2 = out_of_order->register_array[progTrace[i].src2Idx];
+            unsigned int father1_delay = 0;
+            unsigned int father2_delay = 0;
             if (src1 == nullptr && src2 == nullptr) {
                 new_inst->point_to_entry = true;
-            } else if (src1 != nullptr) {
-                new_inst->father1 = src1;
-                new_inst->delay += opsLatency[new_inst->command[SRC1]]; //enlarging the latency field with src1 value
-            } else if (src2 != nullptr) {
-                new_inst->father2 = src2;
-                new_inst->delay += opsLatency[new_inst->command[SRC2]]; //enlarging the latency field with src2 value
             }
+            if (src1 != nullptr) {
+                new_inst->father1 = src1;
+                father1_delay = new_inst->father1->delay; //enlarging the latency field with src1 value
+            }
+            if (src2 != nullptr) {
+                new_inst->father2 = src2;
+                father2_delay = new_inst->father2->delay; //enlarging the latency field with src2 value
+            }
+            new_inst->delay+= std::max(father1_delay, father2_delay);
+            out_of_order->register_array[new_inst->command[DST]] = new_inst;
         }
         return (ProgCtx) out_of_order; //if the allocation fails, the returned value will be nullptr.
     }
