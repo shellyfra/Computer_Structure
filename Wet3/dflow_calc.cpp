@@ -68,8 +68,9 @@ public:
 ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[], unsigned int numOfInsts) {
     try {
         OOOExe *out_of_order = new OOOExe(opsLatency, progTrace, numOfInsts );
-        //now we will calculate the dependencies :)
+        //now we will calculate the dependencies
         for (unsigned int i = 0; i < numOfInsts; ++i) {
+            //for each instruction, we'll create a node that contains the following information
             Node *new_inst = new Node(opsLatency[progTrace[i].opcode], progTrace[i].opcode, progTrace[i].dstIdx, progTrace[i].src1Idx,
                                       progTrace[i].src2Idx, i);
             out_of_order->inst_array.push_back(new_inst);
@@ -88,6 +89,7 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
                 new_inst->father2 = src2;
                 father2_delay = new_inst->father2->delay; //enlarging the latency field with src2 value
             }
+            //adding the father's latency to the new instruction latency field.
             new_inst->delay+= std::max(father1_delay, father2_delay);
             out_of_order->register_array[new_inst->command[DST]] = new_inst;
         }
@@ -99,6 +101,7 @@ ProgCtx analyzeProg(const unsigned int opsLatency[], const InstInfo progTrace[],
 }
 
 void freeProgCtx(ProgCtx ctx) {
+    //free all allocated memory
     OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
     delete out_of_order;
 }
@@ -114,14 +117,17 @@ int getInstDepth(ProgCtx ctx, unsigned int theInst) {
 
     int inclusive_delay = out_of_order->inst_array[theInst]->delay;
     //return the total delay minus the instruction delay
+    //note that the delay field is initialized to contain the depth of the max dependencies
     return inclusive_delay - out_of_order->inst_array[theInst]->original_delay;
 }
 
 int getInstDeps(ProgCtx ctx, unsigned int theInst, int *src1DepInst, int *src2DepInst) {
+    //checking the given values
     if (ctx == nullptr || src1DepInst == nullptr || src2DepInst == nullptr) return -1;
     OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
     if ((theInst > out_of_order->num_of_insts) || (theInst < 0) ) return -1;
 
+    //saves the depended instructions. if depends on entry - saves -1
     Node* node_inst = out_of_order->inst_array[theInst];
     *src1DepInst = (node_inst->father1 == nullptr) ? -1 : node_inst->father1->idx_of_instruction;
     *src2DepInst = (node_inst->father2 == nullptr) ? -1 : node_inst->father2->idx_of_instruction;
@@ -132,6 +138,8 @@ int getProgDepth(ProgCtx ctx) {
     if (ctx == nullptr){
         return -1;
     }
+    //go through the instructions and compare the delay field to find the max depth.
+    //note that the delay field is initialized to contain the depth of the max dependencies
     OOOExe* out_of_order =static_cast<OOOExe*>(ctx);
     unsigned int max = 0;
     for (unsigned int i = 0; i < out_of_order->inst_array.size(); ++i) {
