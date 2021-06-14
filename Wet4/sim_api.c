@@ -147,7 +147,7 @@ void get_inst(char *line, int inst_num, int tid) {
     while (strcmp(command, cmdStr[opc]) != 0) {
         ++opc;
     }
-    instructions[tid][inst_num].opcode = opc;
+    instructions[tid][inst_num].opcode = (cmd_opcode) opc;
     switch (opc) {
         case CMD_NOP: // NOP
             break;
@@ -195,9 +195,9 @@ int SIM_MemReset(const char *memImgFname) {
         }
         if(line[0] == 'N'){
 			threadnumber=atoi(&line[1]);
-			instructions = malloc(sizeof(*instructions)*threadnumber);
+			instructions = (Instruction **) malloc(sizeof(*instructions) * threadnumber);
 			for(int i=0; i<threadnumber; i++){
-				instructions[i]=malloc(sizeof(instructions[i])*100);
+				instructions[i]=(Instruction *)malloc(sizeof(instructions[i])*100);
 			}
 			break;
 		}
