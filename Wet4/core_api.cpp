@@ -7,14 +7,24 @@
 #include <vector>
 
 enum status{HALT = 0, WAITING, READY};
+class sched {
+    status stat_thread;
+    int countdown_thread;
+};
 class threads_status {
-    status threds_stat[REGS_COUNT];
-
-
+public:
+    std::vector<sched> map_thread;
+    int num_instructions;
+    int total_cycles;
+    int num_threads;
 };
 
 void CORE_BlockedMT() {
-   int threads = SIM_GetThreadsNum();
+   //int threads = SIM_GetThreadsNum();
+   // c'tor for threads
+   // while (not all halt)
+   //   do queue of threads number ( enqueue dequeue)
+   //
 
 }
 
