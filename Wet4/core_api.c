@@ -4,9 +4,18 @@
 #include "sim_api.h"
 
 #include <stdio.h>
+#include <vector>
 
+enum status{HALT = 0, WAITING, READY};
+class threads_status {
+    status threds_stat[REGS_COUNT];
+
+
+};
 
 void CORE_BlockedMT() {
+   int threads = SIM_GetThreadsNum();
+
 }
 
 void CORE_FinegrainedMT() {
