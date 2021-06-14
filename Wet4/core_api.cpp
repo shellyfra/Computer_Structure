@@ -19,6 +19,10 @@ public:
     int num_threads;
 };
 
+/*
+ *This function contains a full simulation of a blocked MT machine.
+ * The function reaches it's end when all of the threads reach status 'HALT'.
+ */
 void CORE_BlockedMT() {
    //int threads = SIM_GetThreadsNum();
    // c'tor for threads
@@ -28,19 +32,41 @@ void CORE_BlockedMT() {
 
 }
 
+/*
+ *This function contains a full simulation of a fine-grained MT machine.
+ * The function reaches it's end when all of the threads reach status 'HALT'.
+ */
 void CORE_FinegrainedMT() {
 }
 
+/**
+ * calculated the performence of the system in CPI.
+ * @return the performence fo the system in CPI units
+ */
 double CORE_BlockedMT_CPI(){
-	return 0;
+    return 0;
 }
 
+/**
+ * calculated the performence of the system in CPI.
+ * @return the performence fo the system in CPI units
+ */
 double CORE_FinegrainedMT_CPI(){
-	return 0;
+    return 0;
 }
 
+/**
+ *Function returns the register file of a given thread through a pointer named context
+ * @param context
+ * @param threadid - a given id of a thread
+ */
 void CORE_BlockedMT_CTX(tcontext* context, int threadid) {
 }
 
+/**
+ *Function returns the register file of a given thread through a pointer named context
+ * @param context
+ * @param threadid - a given id of a thread
+ */
 void CORE_FinegrainedMT_CTX(tcontext* context, int threadid) {
 }
