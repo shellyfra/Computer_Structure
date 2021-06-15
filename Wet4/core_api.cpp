@@ -98,6 +98,7 @@ void CORE_BlockedMT() {
                 case CMD_STORE:
                     break;
                 case CMD_HALT:
+                    blocked_multithread->num_instructions++;
                     blocked_multithread->map_thread[running_thread]->stat_thread = HALT;
                     blocked_multithread->total_cycles++; // 1 for HALT
                     threads_queue.pop(); // TODO : not sure it needs to be here
@@ -143,8 +144,9 @@ void CORE_FinegrainedMT() {
  * @return the performence fo the system in CPI units
  */
 double CORE_BlockedMT_CPI(){
+    double cpi = (double)blocked_multithread->total_cycles / (double)blocked_multithread->num_instructions;
     delete blocked_multithread;
-    return 0;
+    return cpi;
 }
 
 /**
@@ -152,7 +154,9 @@ double CORE_BlockedMT_CPI(){
  * @return the performence fo the system in CPI units
  */
 double CORE_FinegrainedMT_CPI(){
-    return 0;
+    double cpi = (double)finegrained_multithread->total_cycles / (double)finegrained_multithread->num_instructions;
+    delete finegrained_multithread;
+    return cpi;
 }
 
 /**
