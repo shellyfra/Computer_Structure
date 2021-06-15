@@ -15,11 +15,17 @@ public:
     int countdown_thread;
     int cur_line;
     uint32_t thread_id;
-    int reg[REGS_COUNT] = {0, 0, 0, 0, 0, 0, 0, 0}; // init all regs to 0
-    explicit Sched(int tid): stat_thread(READY), countdown_thread(0), cur_line(0), thread_id(tid){
-    }
+    tcontext regs_array{};
 
+    explicit Sched(int tid) : stat_thread(READY), countdown_thread(0), cur_line(0), thread_id(tid) {
+        for (int i = 0; i < REGS_COUNT; i++) {
+            regs_array.reg[i] = 0;
+        }
+    }
+    ~Sched() = default;
+    Sched(Sched &other) = default;
 };
+
 class ThreadsStatus {
 public:
     std::vector<Sched*> map_thread;
@@ -54,6 +60,7 @@ public:
     }
 };
 ThreadsStatus* blocked_multithread;
+ThreadsStatus* finegrained_multithread;
 /*
  *This function contains a full simulation of a blocked MT machine.
  * The function reaches it's end when all of the threads reach status 'HALT'.
@@ -93,25 +100,34 @@ void CORE_BlockedMT() {
                 case CMD_HALT:
                     blocked_multithread->map_thread[running_thread]->stat_thread = HALT;
                     blocked_multithread->total_cycles++; // 1 for HALT
+                    threads_queue.pop(); // TODO : not sure it needs to be here
                     break;
                 default:
                     break;
             }
         }
-        if (blocked_multithread->map_thread[running_thread]->stat_thread == HALT){
-            threads_queue.pop(); // we are not removing elements from queue unless its halted ( in order to try working on the same thread that we are on it now)
-
-        }
         // check if this thread can't run but others can
-        if (blocked_multithread->readyThreads() && (blocked_multithread->map_thread[running_thread]->stat_thread != READY)) {
+        if (blocked_multithread->readyThreads()) {
+            //&& (blocked_multithread->map_thread[running_thread]->stat_thread != READY) - DONT NEED BECAUSE WE ARE OUT OF THE WHILE LOOP
             blocked_multithread->total_cycles += blocked_multithread->context_switch_cost;
             threads_queue.pop();
-            threads_queue.push(running_thread);
+            // we are not removing elements from queue unless its halted
+            // ( in order to try working on the same thread that we are on it now)
+            if (blocked_multithread->map_thread[running_thread]->stat_thread != HALT) {
+                threads_queue.push(running_thread);
+            }
         }
-        // check if switch overhead is needed
-        // if this thread can still run -> run it
-        // update all threads countdown_thread with -1
-        //
+        else { // idle - no thread can run
+            blocked_multithread->total_cycles++;
+            for (int i = 0; i < blocked_multithread->num_threads; ++i) {
+                if (blocked_multithread->map_thread[i]->stat_thread == WAITING){
+                    blocked_multithread->map_thread[i]->countdown_thread--;
+                    if (blocked_multithread->map_thread[i]->countdown_thread == 0){
+                        blocked_multithread->map_thread[i]->stat_thread = READY;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -145,6 +161,7 @@ double CORE_FinegrainedMT_CPI(){
  * @param threadid - a given id of a thread
  */
 void CORE_BlockedMT_CTX(tcontext* context, int threadid) {
+    *context = blocked_multithread->map_thread[threadid]->regs_array;
 }
 
 /**
@@ -153,4 +170,5 @@ void CORE_BlockedMT_CTX(tcontext* context, int threadid) {
  * @param threadid - a given id of a thread
  */
 void CORE_FinegrainedMT_CTX(tcontext* context, int threadid) {
+    *context = finegrained_multithread->map_thread[threadid]->regs_array;
 }
