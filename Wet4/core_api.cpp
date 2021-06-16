@@ -8,19 +8,6 @@
 #include <vector>
 #include <queue>
 
-/*
-    typedef enum {
-        CMD_NOP = 0,
-        CMD_ADD,     // dst <- src1 + src2
-        CMD_SUB,     // dst <- src1 - src2
-        CMD_ADDI,    // dst <- src1 + imm
-        CMD_SUBI,    // dst <- src1 - imm
-        CMD_LOAD,    // dst <- Mem[src1 + src2]  (src2 may be an immediate)
-        CMD_STORE,   // Mem[dst + src2] <- src1  (src2 may be an immediate)
-        CMD_HALT,
-    } cmd_opcode;
-*/
-
 enum status{HALT = 0, WAITING, READY};
 class Sched {
 public:
@@ -74,20 +61,43 @@ public:
     }
 };
 
-void cmd_add_or_sub(ThreadsStatus* multithread, int running_thread, Instruction* inst, bool add_inst) {
-    int src1 = inst->src1_index;
-    int src2 = inst->src2_index_imm;
+void loadOrStoreOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
+    int src1_idx = inst->src1_index;
+    int src2_idx = inst->src2_index_imm;
     int dst = inst->dst_index;
-    int idx1 = multithread->map_thread[running_thread]->regs_array.reg[src1];
-    int idx2 = multithread->map_thread[running_thread]->regs_array.reg[src2];
-    if (add_inst) {
-        // dst <- src1 + src2
-        multithread->map_thread[running_thread]->regs_array.reg[dst] = idx1 + idx2;
-    } else {
-        // dst <- src1 - src2
-        multithread->map_thread[running_thread]->regs_array.reg[dst] = idx1 - idx2;
+    int src1_addr = multithread->map_thread[running_thread]->regs_array.reg[src1_idx];
+}
+
+void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_add_inst) {
+    int src1_idx = inst->src1_index;
+    int src2_idx = inst->src2_index_imm;
+    int dst = inst->dst_index;
+    int src1 = multithread->map_thread[running_thread]->regs_array.reg[src1_idx];
+    //if the command is REGISTER + REGISTER
+    if (!inst->isSrc2Imm) {
+        int src2 = multithread->map_thread[running_thread]->regs_array.reg[src2_idx];
+        if (is_add_inst) {
+            // dst <- src1 + src2
+            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 + src2;
+        } else {
+            // dst <- src1 - src2
+            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 - src2;
+        }
+    }
+    //if the command is REGISTER + IMMEDIATE
+    else {
+        int src2 = src2_idx; // because it's an immediate
+        if (is_add_inst) {
+            // dst <- src1 + src2
+            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 + src2;
+        } else {
+            // dst <- src1 - src2
+            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 - src2;
+        }
     }
 }
+
+
 ThreadsStatus* blocked_multithread;
 ThreadsStatus* finegrained_multithread;
 /*
@@ -114,21 +124,24 @@ void CORE_BlockedMT() {
            blocked_multithread->total_cycles++;
            SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
            switch (new_inst.opcode) { //todo: check if switch case supports this type
-               case CMD_NOP: //neta
+               case CMD_NOP:
+                   blocked_multithread->total_cycles++;
                    break;
-               case CMD_ADD: //shelly
-                   cmd_add_or_sub(blocked_multithread, running_thread, &new_inst, true);
+               case CMD_ADD:
+                   addOrSubOperation(blocked_multithread, running_thread, &new_inst, true);
                    break;
-               case CMD_SUB: //neta
-                   cmd_add_or_sub(blocked_multithread, running_thread, &new_inst, false);
+               case CMD_SUB:
+                   addOrSubOperation(blocked_multithread, running_thread, &new_inst, false);
                    break;
-               case CMD_ADDI: //shelly
+               case CMD_ADDI:
+                   addOrSubOperation(blocked_multithread, running_thread, &new_inst, true);
                    break;
-               case CMD_SUBI: // neta
+               case CMD_SUBI:
+                   addOrSubOperation(blocked_multithread, running_thread, &new_inst, false);
                    break;
-               case CMD_LOAD: //shelly
+               case CMD_LOAD:
                    break;
-               case CMD_STORE: //neta
+               case CMD_STORE:
                    break;
                case CMD_HALT:
                    blocked_multithread->map_thread[running_thread]->stat_thread = HALT;
