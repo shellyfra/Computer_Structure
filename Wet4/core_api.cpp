@@ -73,6 +73,21 @@ public:
         return false;
     }
 };
+
+void cmd_add_or_sub(ThreadsStatus* multithread, int running_thread, Instruction* inst, bool add_inst) {
+    int src1 = inst->src1_index;
+    int src2 = inst->src2_index_imm;
+    int dst = inst->dst_index;
+    int idx1 = multithread->map_thread[running_thread]->regs_array.reg[src1];
+    int idx2 = multithread->map_thread[running_thread]->regs_array.reg[src2];
+    if (add_inst) {
+        // dst <- src1 + src2
+        multithread->map_thread[running_thread]->regs_array.reg[dst] = idx1 + idx2;
+    } else {
+        // dst <- src1 - src2
+        multithread->map_thread[running_thread]->regs_array.reg[dst] = idx1 - idx2;
+    }
+}
 ThreadsStatus* blocked_multithread;
 ThreadsStatus* finegrained_multithread;
 /*
@@ -102,8 +117,10 @@ void CORE_BlockedMT() {
                case CMD_NOP: //neta
                    break;
                case CMD_ADD: //shelly
+                   cmd_add_or_sub(blocked_multithread, running_thread, &new_inst, true);
                    break;
                case CMD_SUB: //neta
+                   cmd_add_or_sub(blocked_multithread, running_thread, &new_inst, false);
                    break;
                case CMD_ADDI: //shelly
                    break;
