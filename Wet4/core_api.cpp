@@ -15,12 +15,9 @@ public:
     int countdown_thread;
     int cur_line;
     uint32_t thread_id;
-    tcontext regs_array;
+    //tcontext* regs_array;
 
     explicit Sched(int tid) : stat_thread(READY), countdown_thread(0), cur_line(0), thread_id(tid) {
-        for (int i = 0; i < REGS_COUNT; i++) {
-            regs_array.reg[i] = 0;
-        }
     }
     ~Sched() = default;
     Sched(Sched &other) = default;
@@ -35,20 +32,27 @@ public:
     int context_switch_cost;
     int total_cycles;
     int num_instructions;
+    tcontext* regs_array;
 
     ThreadsStatus(int num_of_threads, int load_cyc, int store_cyc, int switch_overhead = 0):
-        num_threads(num_of_threads), load_cycles(load_cyc), store_cycles(store_cyc),
-        context_switch_cost(switch_overhead),
-        total_cycles(0), num_instructions(0){
+        num_threads(num_of_threads), load_cycles(load_cyc), store_cycles(store_cyc), context_switch_cost(switch_overhead),
+        total_cycles(0), num_instructions(0) {
             map_thread.resize(num_of_threads);
             for (int i = 0; i <num_of_threads ; i++) {
                 map_thread[i] = new Sched(i);
+            }
+            regs_array = (tcontext*)malloc(num_of_threads * sizeof(tcontext));
+            for(int k=0; k<num_of_threads; k++) {
+                for (int i=0; i<REGS_COUNT; i++) {
+                    regs_array[k].reg[i] = 0;
+                }
             }
     }
     ~ThreadsStatus() {
         for (int i = 0; i <num_threads ; i++) {
             delete map_thread[i];
         }
+        free(regs_array);
     }
     ThreadsStatus(ThreadsStatus& other) = default;
     bool readyThreads() {
@@ -68,16 +72,18 @@ void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruct
     int src1_idx = inst->src1_index;
     int src2_idx = inst->src2_index_imm;
     int dst = inst->dst_index;
-    int src1 = multithread->map_thread[running_thread]->regs_array.reg[src1_idx];
+    int src1 = multithread->regs_array[running_thread].reg[src1_idx];
     //if the command is REGISTER + REGISTER
     if (!inst->isSrc2Imm) {
-        int src2 = multithread->map_thread[running_thread]->regs_array.reg[src2_idx];
+        int src2 = multithread->regs_array[running_thread].reg[src2_idx];
         if (is_add_inst) {
             // dst <- src1 + src2
-            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 + src2;
+            multithread->regs_array[running_thread].reg[dst] = src1 + src2;
+            //printf("ADD reg%d = %d\n", dst,src1 + src2);
         } else {
             // dst <- src1 - src2
-            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 - src2;
+            multithread->regs_array[running_thread].reg[dst] = src1 - src2;
+            //printf("SUB reg%d = %d\n", dst,src1 - src2);
         }
     }
     //if the command is REGISTER + IMMEDIATE
@@ -85,10 +91,12 @@ void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruct
         int src2 = src2_idx; // because it's an immediate
         if (is_add_inst) {
             // dst <- src1 + src2
-            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 + src2;
+            multithread->regs_array[running_thread].reg[dst] = src1 + src2;
+            //printf("ADDI reg%d = %d\n", dst,src1 + src2);
         } else {
             // dst <- src1 - src2
-            multithread->map_thread[running_thread]->regs_array.reg[dst] = src1 - src2;
+            multithread->regs_array[running_thread].reg[dst] = src1 - src2;
+            //printf("SUBI reg%d = %d\n", dst,src1 - src2);
         }
     }
 }
@@ -98,16 +106,17 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
     int src1 = inst->src1_index;
     int src2 = inst->src2_index_imm;
     int dst = inst->dst_index;
-    int idx1 = multithread->map_thread[running_thread]->regs_array.reg[src1];
+    int idx1 = multithread->regs_array[running_thread].reg[src1];
     int idx2;
     if (inst->isSrc2Imm){
         idx2 = src2;
     } else {
-        idx2 = multithread->map_thread[running_thread]->regs_array.reg[src2];
+        idx2 = multithread->regs_array[running_thread].reg[src2];
     }
     if (is_load){
         // dst <- Mem[src1 + src2]  (src2 may be an immediate)
-        SIM_MemDataRead((idx1 +idx2), &multithread->map_thread[running_thread]->regs_array.reg[dst]);
+        SIM_MemDataRead((idx1 +idx2), &multithread->regs_array[running_thread].reg[dst]);
+        //printf("LOAD reg%d <- MEM[%d] \n", dst, idx1 + idx2);
         if (multithread->load_cycles > 0) {
             multithread->map_thread[running_thread]->stat_thread = WAITING;
             multithread->map_thread[running_thread]->countdown_thread = multithread->load_cycles;
@@ -116,13 +125,17 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
     }
     else {
         // Mem[dst + src2] <- src1  (src2 may be an immediate)
-        SIM_MemDataWrite((dst + idx2), idx1);
+        SIM_MemDataWrite((dst + idx2), multithread->regs_array[running_thread].reg[idx1]);
+        //printf("STORE MEM[%d] <- %d \n", dst+ idx2, multithread->regs_array[running_thread].reg[idx1]);
         if (multithread->store_cycles > 0) {
             multithread->map_thread[running_thread]->stat_thread = WAITING;
             multithread->map_thread[running_thread]->countdown_thread = multithread->store_cycles;
         }
         // else we dont need to do anything because the thread isn't waiting
     }
+    /*for (int i=0; i<REGS_COUNT; ++i)
+        printf("\tR%d = 0x%X ", i, multithread->regs_array[running_thread].reg[i]);
+        */
 }
 
 /*
@@ -178,11 +191,27 @@ void CORE_BlockedMT() {
                    break;
            }
            blocked_multithread->map_thread[running_thread]->cur_line++;
+           for (int i = 0; i < blocked_multithread->num_threads; i++) {
+               if (blocked_multithread->map_thread[i]->stat_thread == WAITING && (i != running_thread)) {
+                   blocked_multithread->map_thread[i]->countdown_thread--;
+                   if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
+                       blocked_multithread->map_thread[i]->stat_thread = READY;
+                   }
+               }
+           }
        }
        // Current stat_thred != READY. check if this thread can't run but others can
        if (blocked_multithread->readyThreads()) {
            //&& (blocked_multithread->map_thread[running_thread]->stat_thread != READY) - DONT NEED BECAUSE WE ARE OUT OF THE WHILE LOOP
            blocked_multithread->total_cycles += blocked_multithread->context_switch_cost;
+           for (int i = 0; i < blocked_multithread->num_threads; i++) {
+               if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
+                   blocked_multithread->map_thread[i]->countdown_thread -= blocked_multithread->context_switch_cost;
+                   if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
+                       blocked_multithread->map_thread[i]->stat_thread = READY;
+                   }
+               }
+           }
            if (blocked_multithread->map_thread[running_thread]->stat_thread != HALT) { //meaning we're WAITING
                /*
                 * we are not removing elements from queue unless its halted
@@ -196,13 +225,20 @@ void CORE_BlockedMT() {
            for (int i = 0; i < blocked_multithread->num_threads; i++) {
                if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
                    blocked_multithread->map_thread[i]->countdown_thread--;
-                   if (blocked_multithread->map_thread[i]->countdown_thread == 0) {
+                   if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
                        blocked_multithread->map_thread[i]->stat_thread = READY;
                    }
                }
            }
        }
    }
+    /*for(int k=0; k<threads_num; k++){
+        printf("\nTESTTTTTT Register file thread id %d:\n", k);
+        for (int i=0; i<REGS_COUNT; ++i) {
+            printf("\tR%d = 0x%X", i, blocked_multithread->regs_array[k].reg[i]);
+        }
+        printf("\n");
+    }*/
 }
 
 /*
@@ -240,7 +276,9 @@ double CORE_FinegrainedMT_CPI(){
  * @param threadid - a given id of a thread
  */
 void CORE_BlockedMT_CTX(tcontext* context, int threadid) {
-    *context = blocked_multithread->map_thread[threadid]->regs_array;
+    for (int i=0; i<REGS_COUNT; ++i) {
+        context[threadid].reg[i] = blocked_multithread->regs_array[threadid].reg[i];
+    }
 }
 
 /*
@@ -249,5 +287,7 @@ void CORE_BlockedMT_CTX(tcontext* context, int threadid) {
  * @param threadid - a given id of a thread
  */
 void CORE_FinegrainedMT_CTX(tcontext* context, int threadid) {
-    *context = finegrained_multithread->map_thread[threadid]->regs_array;
+    for (int i=0; i<REGS_COUNT; ++i) {
+        context[threadid].reg[i] = finegrained_multithread->regs_array[threadid].reg[i];
+    }
 }
