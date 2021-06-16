@@ -61,12 +61,8 @@ public:
     }
 };
 
-/*void loadOrStoreOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
-    int src1_idx = inst->src1_index;
-    int src2_idx = inst->src2_index_imm;
-    int dst = inst->dst_index;
-    int src1_addr = multithread->map_thread[running_thread]->regs_array.reg[src1_idx];
-}*/
+ThreadsStatus* blocked_multithread;
+ThreadsStatus* finegrained_multithread;
 
 void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_add_inst) {
     int src1_idx = inst->src1_index;
@@ -97,9 +93,38 @@ void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruct
     }
 }
 
+void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
 
-ThreadsStatus* blocked_multithread;
-ThreadsStatus* finegrained_multithread;
+    int src1 = inst->src1_index;
+    int src2 = inst->src2_index_imm;
+    int dst = inst->dst_index;
+    int idx1 = multithread->map_thread[running_thread]->regs_array.reg[src1];
+    int idx2;
+    if (inst->isSrc2Imm){
+        idx2 = src2;
+    } else {
+        idx2 = multithread->map_thread[running_thread]->regs_array.reg[src2];
+    }
+    if (is_load){
+        // dst <- Mem[src1 + src2]  (src2 may be an immediate)
+        SIM_MemDataRead((idx1 +idx2), &multithread->map_thread[running_thread]->regs_array.reg[dst]);
+        if (multithread->load_cycles > 0) {
+            multithread->map_thread[running_thread]->stat_thread = WAITING;
+            multithread->map_thread[running_thread]->countdown_thread = multithread->load_cycles;
+        }
+        // else we dont need to do anything because the thread isn't waiting
+    }
+    else {
+        // Mem[dst + src2] <- src1  (src2 may be an immediate)
+        SIM_MemDataWrite((dst + idx2), idx1);
+        if (multithread->store_cycles > 0) {
+            multithread->map_thread[running_thread]->stat_thread = WAITING;
+            multithread->map_thread[running_thread]->countdown_thread = multithread->store_cycles;
+        }
+        // else we dont need to do anything because the thread isn't waiting
+    }
+}
+
 /*
  *This function contains a full simulation of a blocked MT machine.
  * The function reaches it's end when all of the threads reach status 'HALT'.
@@ -140,8 +165,10 @@ void CORE_BlockedMT() {
                    addOrSubOperation(blocked_multithread, running_thread, &new_inst, false);
                    break;
                case CMD_LOAD:
+                   loadOrStoreOperation(blocked_multithread, running_thread, &new_inst, true);
                    break;
                case CMD_STORE:
+                   loadOrStoreOperation(blocked_multithread, running_thread, &new_inst, false);
                    break;
                case CMD_HALT:
                    blocked_multithread->map_thread[running_thread]->stat_thread = HALT;
