@@ -61,12 +61,12 @@ public:
     }
 };
 
-void loadOrStoreOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
+/*void loadOrStoreOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
     int src1_idx = inst->src1_index;
     int src2_idx = inst->src2_index_imm;
     int dst = inst->dst_index;
     int src1_addr = multithread->map_thread[running_thread]->regs_array.reg[src1_idx];
-}
+}*/
 
 void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_add_inst) {
     int src1_idx = inst->src1_index;
