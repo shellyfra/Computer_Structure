@@ -112,7 +112,7 @@ void CORE_BlockedMT() {
        while (blocked_multithread->map_thread[running_thread]->stat_thread == READY) { // while thread can still run
            blocked_multithread->num_instructions++;
            blocked_multithread->total_cycles++;
-           SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->thread_id, &new_inst, running_thread);
+           SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
            switch (new_inst.opcode) { //todo: check if switch case supports this type
                case CMD_NOP: //neta
                    break;
@@ -137,6 +137,7 @@ void CORE_BlockedMT() {
                default:
                    break;
            }
+           blocked_multithread->map_thread[running_thread]->cur_line++;
        }
        // Current stat_thred != READY. check if this thread can't run but others can
        if (blocked_multithread->readyThreads()) {
