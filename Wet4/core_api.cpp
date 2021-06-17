@@ -139,12 +139,12 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
         */
 }
 
-void updateThreadsQueue(ThreadsStatus* multithread, int num_threads, int running_thread) {
-    for (int i = 0; i < blocked_multithread->num_threads; i++) {
-        if (blocked_multithread->map_thread[i]->stat_thread == WAITING && (i != running_thread)) {
-            blocked_multithread->map_thread[i]->countdown_thread--;
-            if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
-                blocked_multithread->map_thread[i]->stat_thread = READY;
+void updateThreadsQueue(ThreadsStatus* multithread) {
+    for (int i = 0; i < multithread->num_threads; i++) {
+        if (multithread->map_thread[i]->stat_thread == WAITING) {
+            multithread->map_thread[i]->countdown_thread--;
+            if (multithread->map_thread[i]->countdown_thread <= 0) {
+                multithread->map_thread[i]->stat_thread = READY;
             }
         }
     }
@@ -236,7 +236,7 @@ void CORE_BlockedMT() {
        } else { // idle - no thread can run
            blocked_multithread->total_cycles++;
            //todo:check if works fine. I left the original code below.
-           updateThreadsQueue(blocked_multithread, threads_num, running_thread);
+           updateThreadsQueue(blocked_multithread);
            /*for (int i = 0; i < blocked_multithread->num_threads; i++) {
                if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
                    blocked_multithread->map_thread[i]->countdown_thread--;
@@ -329,7 +329,7 @@ void CORE_FinegrainedMT() {
         }
         /* when reaching here - current thread isn't ready to run */
         if (finegrained_multithread->readyThreads()) {
-            updateThreadsQueue(finegrained_multithread, threads_num, running_thread);
+            updateThreadsQueue(finegrained_multithread);
             /*for (int i = 0; i < finegrained_multithread->num_threads; i++) {
                 if (finegrained_multithread->map_thread[i]->stat_thread == WAITING) {
                     if (finegrained_multithread->map_thread[i]->countdown_thread <= 0) {
@@ -344,7 +344,7 @@ void CORE_FinegrainedMT() {
             threads_queue.push(running_thread);
         } else { // status = idle - no thread can run
             finegrained_multithread->total_cycles++;
-            updateThreadsQueue(finegrained_multithread, threads_num, running_thread);
+            updateThreadsQueue(finegrained_multithread);
             /*for (int i = 0; i < finegrained_multithread->num_threads; i++) {
                 if (finegrained_multithread->map_thread[i]->stat_thread == WAITING) {
                     finegrained_multithread->map_thread[i]->countdown_thread--;
