@@ -102,7 +102,8 @@ void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruct
 }
 
 void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
-
+    //todo: do we need to increase the number of cycles here?
+    //todo: or maybe set the countdown?
     int src1 = inst->src1_index;
     int src2 = inst->src2_index_imm;
     int dst = inst->dst_index;
@@ -138,6 +139,18 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
         */
 }
 
+void updateThreadsQueue(ThreadsStatus* multithread, int num_threads, int running_thread) {
+    for (int i = 0; i < blocked_multithread->num_threads; i++) {
+        if (blocked_multithread->map_thread[i]->stat_thread == WAITING && (i != running_thread)) {
+            blocked_multithread->map_thread[i]->countdown_thread--;
+            if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
+                blocked_multithread->map_thread[i]->stat_thread = READY;
+            }
+        }
+    }
+}
+
+
 /*
  *This function contains a full simulation of a blocked MT machine.
  * The function reaches it's end when all of the threads reach status 'HALT'.
@@ -161,7 +174,7 @@ void CORE_BlockedMT() {
            blocked_multithread->num_instructions++;
            blocked_multithread->total_cycles++;
            SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
-           switch (new_inst.opcode) { //todo: check if switch case supports this type
+           switch (new_inst.opcode) {
                case CMD_NOP:
                    blocked_multithread->total_cycles++;
                    break;
@@ -222,14 +235,16 @@ void CORE_BlockedMT() {
            }
        } else { // idle - no thread can run
            blocked_multithread->total_cycles++;
-           for (int i = 0; i < blocked_multithread->num_threads; i++) {
+           //todo:check if works fine. I left the original code below.
+           updateThreadsQueue(blocked_multithread, threads_num, running_thread);
+           /*for (int i = 0; i < blocked_multithread->num_threads; i++) {
                if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
                    blocked_multithread->map_thread[i]->countdown_thread--;
                    if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
                        blocked_multithread->map_thread[i]->stat_thread = READY;
                    }
                }
-           }
+           }*/
        }
    }
     /*for(int k=0; k<threads_num; k++){
@@ -248,6 +263,97 @@ void CORE_BlockedMT() {
 //todo: what do we do if all of the threads are waiting and then two threads become READY together on the same time.
 // who will run first?  https://moodle.technion.ac.il/mod/forum/discuss.php?d=589397
 void CORE_FinegrainedMT() {
+    int threads_num = SIM_GetThreadsNum();
+    if (threads_num <= 0){
+        return;
+    }
+
+    finegrained_multithread = new ThreadsStatus(threads_num, SIM_GetLoadLat(), SIM_GetStoreLat(),
+            SIM_GetSwitchCycles());
+
+    /* creating a queue of threads and filling it up */
+    std::queue<int> threads_queue; //todo: check if we should include thread number 0 time
+    for (int i = 0; i < threads_num; i++) {
+        threads_queue.push(i);
+    }
+
+    while (!threads_queue.empty()){
+        int running_thread = threads_queue.front();
+        Instruction new_inst;
+
+        while (finegrained_multithread->map_thread[running_thread]->stat_thread == READY) {
+            finegrained_multithread->num_instructions++;
+            finegrained_multithread->total_cycles++; //todo: if considered context switch - remove this line.
+            SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
+            switch (new_inst.opcode){
+                case CMD_NOP:
+                    blocked_multithread->total_cycles++;
+                    break;
+                case CMD_ADD:
+                    addOrSubOperation(finegrained_multithread, running_thread, &new_inst, true);
+                    break;
+                case CMD_SUB:
+                    addOrSubOperation(finegrained_multithread, running_thread, &new_inst, false);
+                    break;
+                case CMD_ADDI:
+                    addOrSubOperation(finegrained_multithread, running_thread, &new_inst, true);
+                    break;
+                case CMD_SUBI:
+                    addOrSubOperation(finegrained_multithread, running_thread, &new_inst, false);
+                    break;
+                case CMD_LOAD:
+                    loadOrStoreOperation(finegrained_multithread, running_thread, &new_inst, true);
+                    break;
+                case CMD_STORE:
+                    loadOrStoreOperation(finegrained_multithread, running_thread, &new_inst, false);
+                    break;
+                case CMD_HALT:
+                    finegrained_multithread->map_thread[running_thread]->stat_thread = HALT;
+                    threads_queue.pop();
+                    break;
+                default:
+                    break;
+            }
+
+            finegrained_multithread->map_thread[running_thread]->cur_line++;
+
+            /* updating the status of all threads in the queue */
+            for (int i = 0; i < finegrained_multithread->num_threads; i++) {
+                if (finegrained_multithread->map_thread[i]->stat_thread == WAITING && (i != running_thread)) {
+                    finegrained_multithread->map_thread[i]->countdown_thread--;
+                    if (finegrained_multithread->map_thread[i]->countdown_thread <= 0) {
+                        finegrained_multithread->map_thread[i]->stat_thread = READY;
+                    }
+                }
+            }
+        }
+        /* when reaching here - current thread isn't ready to run */
+        if (finegrained_multithread->readyThreads()) {
+            updateThreadsQueue(finegrained_multithread, threads_num, running_thread);
+            /*for (int i = 0; i < finegrained_multithread->num_threads; i++) {
+                if (finegrained_multithread->map_thread[i]->stat_thread == WAITING) {
+                    if (finegrained_multithread->map_thread[i]->countdown_thread <= 0) {
+                        finegrained_multithread->map_thread[i]->stat_thread = READY;
+                    }
+                }
+            }*/
+        }
+        if (finegrained_multithread->map_thread[running_thread]->stat_thread != HALT) { //meaning we're waiting
+            /* move current thread to the end of the line */
+            threads_queue.pop();
+            threads_queue.push(running_thread);
+        } else { // status = idle - no thread can run
+            finegrained_multithread->total_cycles++;
+            updateThreadsQueue(finegrained_multithread, threads_num, running_thread);
+            /*for (int i = 0; i < finegrained_multithread->num_threads; i++) {
+                if (finegrained_multithread->map_thread[i]->stat_thread == WAITING) {
+                    finegrained_multithread->map_thread[i]->countdown_thread--;
+                    if (finegrained_multithread->map_thread[i]->countdown_thread <= 0) {
+                        finegrained_multithread->map_thread[i]->stat_thread = READY;
+                    }
+                }*/
+            }
+    }
 }
 
 /*
