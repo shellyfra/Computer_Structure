@@ -136,7 +136,7 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
     }
     else {
         // Mem[dst + src2] <- src1  (src2 may be an immediate)
-        SIM_MemDataWrite((dst + idx2), multithread->regs_array[running_thread].reg[idx1]);
+        SIM_MemDataWrite((dst + idx2), multithread->regs_array[running_thread].reg[src1]);
         //printf("STORE MEM[%d] <- %d \n", dst+ idx2, multithread->regs_array[running_thread].reg[idx1]);
         if (multithread->store_cycles > 0) {
             multithread->map_thread[running_thread]->stat_thread = WAITING;
@@ -223,9 +223,22 @@ void CORE_BlockedMT() {
                }
            }
        }
+       if (threads_queue.empty()) return;
+
+       while (!blocked_multithread->readyThreads()) { // idle - no thread can run
+           blocked_multithread->total_cycles++;
+           updateThreadsQueueStatus(blocked_multithread);
+       }
+
+       //check if context switch is needed! idle -> context switch -> thread running
        // Current stat_thred != READY. check if this thread can't run but others can
-       if (blocked_multithread->readyThreads()) {
-           //&& (blocked_multithread->map_thread[running_thread]->stat_thread != READY) - DONT NEED BECAUSE WE ARE OUT OF THE WHILE LOOP
+       if (blocked_multithread->map_thread[running_thread]->stat_thread != READY){ // if the current thread cant run (WAITING/HALT)- need to switch threads
+           // search for the ready thread
+           while (blocked_multithread->map_thread[threads_queue.front()]->stat_thread == WAITING) {
+               int tmp = threads_queue.front();
+               threads_queue.pop();
+               threads_queue.push(tmp);
+           }
            blocked_multithread->total_cycles += blocked_multithread->context_switch_cost;
            for (int i = 0; i < blocked_multithread->num_threads; i++) {
                if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
@@ -235,30 +248,8 @@ void CORE_BlockedMT() {
                    }
                }
            }
-           if (blocked_multithread->map_thread[running_thread]->stat_thread != HALT) { //meaning we're WAITING
-               /*
-                * we are not removing elements from queue unless its halted
-                * ( in order to try working on the same thread that we are on it now)
-                */
-               threads_queue.pop();
-               threads_queue.push(running_thread);
-           }
-       } else { // idle - no thread can run
-           if (!threads_queue.empty()) {
-               blocked_multithread->total_cycles++;
-               //todo:check if works fine. I left the original code below.
-               updateThreadsQueueStatus(blocked_multithread);
-               /*for (int i = 0; i < blocked_multithread->num_threads; i++) {
-                   if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
-                       blocked_multithread->map_thread[i]->countdown_thread--;
-                       if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
-                           blocked_multithread->map_thread[i]->stat_thread = READY;
-                       }
-                   }
-               }*/
-           }
-
        }
+       // if this thread can run -> do nothing with the queue (leave it in the front)
    }
     /*for(int k=0; k<threads_num; k++){
         printf("\nTESTTTTTT Register file thread id %d:\n", k);
