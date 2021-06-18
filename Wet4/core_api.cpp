@@ -186,7 +186,7 @@ void CORE_BlockedMT() {
            SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
            switch (new_inst.opcode) {
                case CMD_NOP:
-                   blocked_multithread->total_cycles++;
+                   //blocked_multithread->total_cycles++; we add the cycles above
                    break;
                case CMD_ADD:
                    addOrSubOperation(blocked_multithread, running_thread, &new_inst, true);
@@ -244,17 +244,20 @@ void CORE_BlockedMT() {
                threads_queue.push(running_thread);
            }
        } else { // idle - no thread can run
-           blocked_multithread->total_cycles++;
-           //todo:check if works fine. I left the original code below.
-           updateThreadsQueueStatus(blocked_multithread);
-           /*for (int i = 0; i < blocked_multithread->num_threads; i++) {
-               if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
-                   blocked_multithread->map_thread[i]->countdown_thread--;
-                   if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
-                       blocked_multithread->map_thread[i]->stat_thread = READY;
+           if (!threads_queue.empty()) {
+               blocked_multithread->total_cycles++;
+               //todo:check if works fine. I left the original code below.
+               updateThreadsQueueStatus(blocked_multithread);
+               /*for (int i = 0; i < blocked_multithread->num_threads; i++) {
+                   if (blocked_multithread->map_thread[i]->stat_thread == WAITING) {
+                       blocked_multithread->map_thread[i]->countdown_thread--;
+                       if (blocked_multithread->map_thread[i]->countdown_thread <= 0) {
+                           blocked_multithread->map_thread[i]->stat_thread = READY;
+                       }
                    }
-               }
-           }*/
+               }*/
+           }
+
        }
    }
     /*for(int k=0; k<threads_num; k++){
