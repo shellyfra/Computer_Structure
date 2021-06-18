@@ -136,7 +136,7 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
     }
     else {
         // Mem[dst + src2] <- src1  (src2 may be an immediate)
-        SIM_MemDataWrite((dst + idx2), multithread->regs_array[running_thread].reg[src1]);
+        SIM_MemDataWrite((dst + idx2), idx1);
         //printf("STORE MEM[%d] <- %d \n", dst+ idx2, multithread->regs_array[running_thread].reg[idx1]);
         if (multithread->store_cycles > 0) {
             multithread->map_thread[running_thread]->stat_thread = WAITING;
