@@ -78,6 +78,16 @@ public:
 ThreadsStatus* blocked_multithread;
 ThreadsStatus* finegrained_multithread;
 
+void printRegs(ThreadsStatus* multithread){
+    for (int i = 0; i < multithread->num_threads; ++i) {
+        std::cout << "thread " << i << std::endl;
+        for (int j = 0; j < REGS_COUNT ; ++j) {
+            std::cout << "reg[" << j << "] = " << multithread->regs_array[i].reg[j] << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
 void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_add_inst) {
     int src1_idx = inst->src1_index;
     int src2_idx = inst->src2_index_imm;
@@ -136,7 +146,7 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
     }
     else {
         // Mem[dst + src2] <- src1  (src2 may be an immediate)
-        SIM_MemDataWrite((dst + idx2), idx1);
+        SIM_MemDataWrite((multithread->regs_array[running_thread].reg[dst] + idx2), idx1);
         //printf("STORE MEM[%d] <- %d \n", dst+ idx2, multithread->regs_array[running_thread].reg[idx1]);
         if (multithread->store_cycles > 0) {
             multithread->map_thread[running_thread]->stat_thread = WAITING;
@@ -213,6 +223,7 @@ void CORE_BlockedMT() {
                default:
                    break;
            }
+           //printRegs(blocked_multithread);
            blocked_multithread->map_thread[running_thread]->cur_line++;
            for (int i = 0; i < blocked_multithread->num_threads; i++) {
                if (blocked_multithread->map_thread[i]->stat_thread == WAITING && (i != running_thread)) {
