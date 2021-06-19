@@ -286,7 +286,7 @@ void CORE_FinegrainedMT() {
         }*/
         int running_thread = threads_queue.front();
         Instruction new_inst;
-        SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
+        SIM_MemInstRead(finegrained_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
         bool current_command_is_halt = false;
         /* if current thread STATUS = READY -> run it */
         if (finegrained_multithread->map_thread[running_thread]->stat_thread == READY) {
@@ -294,7 +294,7 @@ void CORE_FinegrainedMT() {
             finegrained_multithread->total_cycles++;
             switch (new_inst.opcode){
                 case CMD_NOP:
-                    blocked_multithread->total_cycles++;
+                    finegrained_multithread->total_cycles++;
                     break;
                 case CMD_ADD:
                     addOrSubOperation(finegrained_multithread, running_thread, &new_inst, true);
