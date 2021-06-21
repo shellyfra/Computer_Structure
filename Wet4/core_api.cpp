@@ -63,16 +63,6 @@ public:
         }
         return false;
     }
-    /* return the index of the next thread that's ready for run */
-    int getNextReadyThread(int current_thread) { //todo: check if this function works as it should
-        int index = 1;
-        while (index++ <= num_threads) {
-            if(map_thread[(current_thread+index)%num_threads]->stat_thread == READY){ //todo: check the formula
-                return index%num_threads;
-            }
-        }
-        return -1;
-    }
 };
 
 ThreadsStatus* blocked_multithread;
@@ -122,8 +112,6 @@ void addOrSubOperation (ThreadsStatus* multithread, int running_thread, Instruct
 }
 
 void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instruction* inst, bool is_load) {
-    //todo: do we need to increase the number of cycles here?
-    //todo: or maybe set the countdown?
     int src1 = inst->src1_index;
     int src2 = inst->src2_index_imm;
     int dst = inst->dst_index;
@@ -154,9 +142,6 @@ void loadOrStoreOperation(ThreadsStatus* multithread, int running_thread, Instru
         }
         // else we dont need to do anything because the thread isn't waiting
     }
-    /*for (int i=0; i<REGS_COUNT; ++i)
-        printf("\tR%d = 0x%X ", i, multithread->regs_array[running_thread].reg[i]);
-        */
 }
 
 void updateThreadsQueueStatus(ThreadsStatus* multithread) {
@@ -218,7 +203,7 @@ void CORE_BlockedMT() {
                    break;
                case CMD_HALT:
                    blocked_multithread->map_thread[running_thread]->stat_thread = HALT;
-                   threads_queue.pop(); // TODO : not sure it needs to be here
+                   threads_queue.pop();
                    break;
                default:
                    break;
@@ -242,7 +227,7 @@ void CORE_BlockedMT() {
        }
 
        //check if context switch is needed! idle -> context switch -> thread running
-       // Current stat_thred != READY. check if this thread can't run but others can
+       // Current stat_thread != READY. check if this thread can't run but others can
        if (blocked_multithread->map_thread[running_thread]->stat_thread != READY){ // if the current thread cant run (WAITING/HALT)- need to switch threads
            // search for the ready thread
            while (blocked_multithread->map_thread[threads_queue.front()]->stat_thread == WAITING) {
@@ -262,13 +247,6 @@ void CORE_BlockedMT() {
        }
        // if this thread can run -> do nothing with the queue (leave it in the front)
    }
-    /*for(int k=0; k<threads_num; k++){
-        printf("\nTESTTTTTT Register file thread id %d:\n", k);
-        for (int i=0; i<REGS_COUNT; ++i) {
-            printf("\tR%d = 0x%X", i, blocked_multithread->regs_array[k].reg[i]);
-        }
-        printf("\n");
-    }*/
 }
 
 /*
@@ -283,18 +261,16 @@ void CORE_FinegrainedMT() {
     finegrained_multithread = new ThreadsStatus(threads_num, SIM_GetLoadLat(), SIM_GetStoreLat(),
             SIM_GetSwitchCycles());
 
-    auto* temp = finegrained_multithread;
-
     /* creating a queue of threads and filling it up */
-    std::queue<int> threads_queue; //todo: check if we should include thread number 0 time
+    std::queue<int> threads_queue;
     for (int i = 0; i < threads_num; i++) {
         threads_queue.push(i);
     }
 
     while (!threads_queue.empty()){
-        /*if (finegrained_multithread->total_cycles == 6){
+        if (finegrained_multithread->total_cycles == 110){
             std::cout << std::endl;
-        }*/
+        }
         int running_thread = threads_queue.front();
         Instruction new_inst;
         SIM_MemInstRead(finegrained_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
@@ -305,7 +281,6 @@ void CORE_FinegrainedMT() {
             finegrained_multithread->total_cycles++;
             switch (new_inst.opcode){
                 case CMD_NOP:
-                    finegrained_multithread->total_cycles++;
                     break;
                 case CMD_ADD:
                     addOrSubOperation(finegrained_multithread, running_thread, &new_inst, true);
@@ -352,8 +327,6 @@ void CORE_FinegrainedMT() {
                     threads_queue.push(running_thread);
                 }
             }
-            //continue; //start the loop again.
-            //NOTE: I added 'else' to the next condition to avoid usage of continue
         }
 
         /* when reaching here - current thread isn't ready to run
@@ -366,10 +339,8 @@ void CORE_FinegrainedMT() {
             finegrained_multithread->total_cycles++;
             updateThreadsQueueStatus(finegrained_multithread);
             if (finegrained_multithread->readyThreads()) { //meaning there are other ready threads
-                //if (finegrained_multithread->map_thread[running_thread]->stat_thread != READY) {
-                    threads_queue.pop();
-                    threads_queue.push(running_thread);
-                //}
+                threads_queue.pop();
+                threads_queue.push(running_thread);
             }
         }
     }
@@ -390,8 +361,6 @@ double CORE_BlockedMT_CPI(){
  * @return the performence fo the system in CPI units
  */
 double CORE_FinegrainedMT_CPI(){
-    /*std::cout << "total cycles: " << (double)finegrained_multithread->total_cycles << std::endl;
-    std::cout << "number of instructions: " << (double)finegrained_multithread->num_instructions << std::endl;*/
     double cpi = (double)finegrained_multithread->total_cycles / (double)finegrained_multithread->num_instructions;
     delete finegrained_multithread;
     return cpi;
