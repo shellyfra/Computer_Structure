@@ -268,9 +268,6 @@ void CORE_FinegrainedMT() {
     }
 
     while (!threads_queue.empty()){
-        if (finegrained_multithread->total_cycles == 110){
-            std::cout << std::endl;
-        }
         int running_thread = threads_queue.front();
         Instruction new_inst;
         SIM_MemInstRead(finegrained_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
