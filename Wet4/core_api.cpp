@@ -274,6 +274,12 @@ void CORE_FinegrainedMT() {
         bool current_command_is_halt = false;
         /* if current thread STATUS = READY -> run it */
         if (finegrained_multithread->map_thread[running_thread]->stat_thread == READY) {
+//            std::cout << "cycle: " << finegrained_multithread->total_cycles << " - current thread: " << running_thread <<
+//                      " - current inst: " << finegrained_multithread->map_thread[running_thread]->cur_line << std::endl;
+//            std::cout << "op " << new_inst.opcode << std:: endl;
+//            if (finegrained_multithread->total_cycles == 81) {
+//                std::cout << " bug is here !! \n";
+//            }
             finegrained_multithread->num_instructions++;
             finegrained_multithread->total_cycles++;
             switch (new_inst.opcode){
@@ -335,7 +341,7 @@ void CORE_FinegrainedMT() {
         } else { /* when reaching here - there are no available threads. we're idle. */
             finegrained_multithread->total_cycles++;
             updateThreadsQueueStatus(finegrained_multithread);
-            if (finegrained_multithread->readyThreads()) { //meaning there are other ready threads
+            if (finegrained_multithread->readyThreads() && finegrained_multithread->map_thread[running_thread]->stat_thread != READY) { //meaning there are other ready threads
                 threads_queue.pop();
                 threads_queue.push(running_thread);
             }
