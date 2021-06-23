@@ -181,7 +181,6 @@ void CORE_BlockedMT() {
            SIM_MemInstRead(blocked_multithread->map_thread[running_thread]->cur_line, &new_inst, running_thread);
            switch (new_inst.opcode) {
                case CMD_NOP:
-                   //blocked_multithread->total_cycles++; we add the cycles above
                    break;
                case CMD_ADD:
                    addOrSubOperation(blocked_multithread, running_thread, &new_inst, true);
@@ -276,9 +275,6 @@ void CORE_FinegrainedMT() {
         /* if current thread STATUS = READY -> run it */
         if (finegrained_multithread->map_thread[running_thread]->stat_thread == READY) {
             last_running_cycle_thread = running_thread;
-            //std::cout << "cycle: " << finegrained_multithread->total_cycles << " - current thread: " << running_thread <<
-            //          " - current inst: " << finegrained_multithread->map_thread[running_thread]->cur_line << std::endl;
-            //std::cout << "op " << new_inst.opcode << std:: endl;
             finegrained_multithread->num_instructions++;
             finegrained_multithread->total_cycles++;
             switch (new_inst.opcode){
@@ -340,7 +336,7 @@ void CORE_FinegrainedMT() {
         } else { /* when reaching here - there are no available threads. we're idle. */
             finegrained_multithread->total_cycles++;
             updateThreadsQueueStatus(finegrained_multithread);
-            if (finegrained_multithread->readyThreads() && last_running_cycle_thread == running_thread) { //meaning there are other ready threads // && finegrained_multithread->map_thread[running_thread]->stat_thread != READY
+            if (finegrained_multithread->readyThreads() && last_running_cycle_thread == running_thread) { //meaning there are other ready threads
                 threads_queue.pop();
                 threads_queue.push(running_thread);
             }
